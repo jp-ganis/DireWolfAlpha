@@ -55,19 +55,11 @@ class FacePlayer():
 		valid = self.game.getValidMoves(board, 1)
 		valid_indices = []
 		
-		for i in range(len(valid)):
+		if valid[63] == 1:
+			return 63
+		
+		for i in [j*3 for j in range(7)]:
 			if valid[i] == 1:
-				valid_indices.append(i)
+				return i
 		
-		print("Face Valid Moves: ", valid_indices)
-		
-		while True:
-			face = [i*3 for i in range(7)]
-			
-			for f in face:
-				if valid[f]==1:
-					return f
-			else:
-				return 63
-
-		return 0
+		return 66

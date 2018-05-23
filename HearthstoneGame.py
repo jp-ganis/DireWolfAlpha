@@ -3,15 +3,6 @@ import sys
 import numpy as np
 
 class HearthstoneGame():
-	"""
-	This class specifies the base Game class. To define your own game, subclass
-	this class and implement the functions below. This works when the game is
-	two-player, adversarial and turn-based.
-
-	Use 1 for player1 and -1 for player2.
-
-	See othello/OthelloGame.py for an example implementation.
-	"""
 	def __init__(self):
 		## size per player is: minion_slot * 7 + hp + mana + turns_taken + turn tracker
 		self.playerSize = 4
@@ -123,16 +114,11 @@ class HearthstoneGame():
 					for i in range(self.minionSize):
 						row[myMinionIndex + i] = 0
 				if anti[targetIndex + self.minionHealthIndex] <= 0:
-					for i in range(self.minionSize):
+					for i in range(self.minionSize):	
 						anti[targetIndex + i] = 0
-		
-		## check for player swap (no moves available except pass)
-		if all([i == 0 for i in self.getValidMoves(b, player)[:-1]]):
-			b[0][self.turnTrackerIndex] = -player
-			b[1][self.turnTrackerIndex] = -player
 			
 		## check if swapping players
-		if b[0][self.turnTrackerIndex] == -player:		
+		if b[0][self.turnTrackerIndex] == -player:	
 			## wake up sleeping minions
 			for mi in self.minionIndices:
 				if row[mi] > 0 and row[mi+self.minionAbleIndex] == self.sleeping:
@@ -238,8 +224,7 @@ def display(board,valids=False):
 	p1row = board[0]
 	p2row = board[1]
 	
-	if all([i == 0 for i in h.getValidMoves(board, board[0][h.turnTrackerIndex])[:-1]]):
-		return
+	player = board[0][h.turnTrackerIndex]
 	
 	canAttackSymbols = ["⁷", "*", ""]
 	
@@ -252,18 +237,31 @@ def display(board,valids=False):
 	
 	boardString = boardString.replace("1qq", "ₒ" * int(p1row[h.playerManaIndex])).replace("2qq", "ₒ" * int(p2row[h.playerManaIndex]))
 	
-	if valids: displayValidMoves(h,b,1)
-	print("-"*30 + "[{}]".format(str(int(board[0][h.turnTrackerIndex]))))
-	print(boardString)
 	print("-"*30)
-	if valids: displayValidMoves(h,b,-1)
+	print(boardString)
+	print("-"*30+ "[{}]".format(str(int(board[0][h.turnTrackerIndex]))))
+	if valids:
+		displayValidMoves(h,b,1)
+		displayValidMoves(h,b,-1)
 	print("\n\n")
 	
 def displayValidMoves(game, board, player):
 	v = game.getValidMoves(board, player)
 	print([i for i in range(len(v)) if v[i] == 1])
 		
-
+def displayTestMove(h, board, player, action):
+	print("~~~~~~~~~~~~~~~~~~~~~~~~~PLAYER {}, ACTION {} ~~~~~~~~~~~~~~~~~~~~~~~~~".format(player,action))
+	v = h.getValidMoves(board, player)
+	
+	if v[action] == 0:
+		print("Invalid Action")
+		return None, None
+	
+	b, n = h.getNextState(board, player, action)
+	display(b, True)
+	return b, n
+	
+		
 def runTests():
 	h = HearthstoneGame()
 	b = h.getInitBoard()
@@ -273,10 +271,8 @@ if __name__ == '__main__':
 	h = HearthstoneGame()
 	b = h.getInitBoard()
 	
-	b, n = h.getNextState(b, 1, 65)
-	display(b, True)
-	b, n = h.getNextState(b, -1, 66)
-	display(b, True)
-	b, n = h.getNextState(b, 1, 0)
-	display(b, True)
+	b, n = displayTestMove(h, b, 1, 65)
+	b, n = displayTestMove(h, b, -1, 66)
+	b, n = displayTestMove(h, b, 1, 66)
+	b, n = displayTestMove(h, b, -1, 65)
 	
