@@ -13,9 +13,11 @@ class HearthstoneGame():
 	See othello/OthelloGame.py for an example implementation.
 	"""
 	def __init__(self):
-		## size per player is: minion_slot * 7 + hp:1 + mana:1 + turns_taken:1 = 21 + 1 + 1 + 1 = 24
-		self.playerSize = 3
+		## size per player is: minion_slot * 7 + hp + mana + turns_taken + turn tracker
+		self.playerSize = 4
 		self.minionSize = 3
+		
+		self.turnTrackerIndex = -4
 		
 		self.playerHealthIndex = -3
 		self.playerManaIndex = -2
@@ -38,10 +40,13 @@ class HearthstoneGame():
 			b[player][self.playerHealthIndex] = 3
 			b[player][self.playerManaIndex] = 1
 			
+		b[0][self.turnTrackerIndex] = 1
+		b[1][self.turnTrackerIndex] = 1
+			
 		return b
 
 	def getBoardSize(self):
-		return (2, self.minionSize * 7 + self.playerSize)
+		return (2, (self.minionSize * 7) + self.playerSize)
 
 	def getActionSize(self):
 		## 7 minions with 9 targets each, + summon a 1/1, + summon a 2/1, + summon a 1/3, pass entirely
@@ -53,7 +58,6 @@ class HearthstoneGame():
 		## action 0-8 = attack with minion 0 into slots 0 (face), 1 (pass), 2-8 (enemy minion)
 		## action 9-17 = attack with minion 1, etc
 		b = np.copy(board)
-		newPlayer = player
 		
 		## get board side row
 		rowIndex = 0 if player == 1 else 1
@@ -67,7 +71,8 @@ class HearthstoneGame():
 		
 		## pass
 		if action == self.getActionSize() - 1:
-			newPlayer = -player
+			b[0][self.turnTrackerIndex] = -player
+			b[1][self.turnTrackerIndex] = -player
 			
 		## summon a new minion
 		elif action >= 63:
@@ -123,10 +128,11 @@ class HearthstoneGame():
 		
 		## check for player swap (no moves available except pass)
 		if all([i == 0 for i in self.getValidMoves(b, player)[:-1]]):
-			newPlayer = -player
+			b[0][self.turnTrackerIndex] = -player
+			b[1][self.turnTrackerIndex] = -player
 			
 		## check if swapping players
-		if newPlayer == -player:		
+		if b[0][self.turnTrackerIndex] == -player:		
 			## wake up sleeping minions
 			for mi in self.minionIndices:
 				if row[mi] > 0 and row[mi+self.minionAbleIndex] == self.sleeping:
@@ -141,12 +147,15 @@ class HearthstoneGame():
 			row[self.playerManaIndex] = 1
 					
 		## return
-		return (b, newPlayer)
+		return (b, -player)
 
 	def getValidMoves(self, board, player):
 		b = np.copy(board)
 		validMoves = [0 for _ in range(self.getActionSize())]
 		validMoves[-1] = 1 ## can always pass
+		
+		if board[0][self.turnTrackerIndex] != player:
+			return validMoves
 		
 		## get board side row
 		rowIndex = 0 if player == 1 else 1
@@ -190,7 +199,7 @@ class HearthstoneGame():
 		rowIndex = 0 if player == 1 else 1
 		antiIndex = (rowIndex + 1) % 2
 		
-		if b[rowIndex][self.playerTurnCountIndex] > 7: return 1e-4
+		if b[rowIndex][self.playerTurnCountIndex] > 5: return 1e-4
 		if b[rowIndex][self.playerHealthIndex] <= 0: return -1
 		if b[antiIndex][self.playerHealthIndex] <= 0: return 1
 		return 0
@@ -225,22 +234,26 @@ class HearthstoneGame():
 		return str(board)
 
 def display(board,valids=False):
+	h = HearthstoneGame()
 	p1row = board[0]
 	p2row = board[1]
+	
+	if all([i == 0 for i in h.getValidMoves(board, board[0][h.turnTrackerIndex])[:-1]]):
+		return
 	
 	canAttackSymbols = ["⁷", "*", ""]
 	
 	ms = ['', '']
 	
 	for (r,m) in [(p1row, 0), (p2row, 1)]:
-		ms[m] = ''.join(["[{}/{}]{}".format(int(r[i]), int(r[i+1]), canAttackSymbols[int(r[i+2])]) for i in range(0, len(r) - 3, 3) if r[i] > 0])
+		ms[m] = ''.join(["[{}/{}]{}".format(int(r[i+h.minionAttackIndex]), int(r[i+h.minionHealthIndex]), canAttackSymbols[int(r[i+h.minionAbleIndex])]) for i in range(0, len(r) - h.playerSize, h.minionSize) if r[i] > 0])
 	
-	boardString = "             p1:{}1qq\n{}\n\n{}\n             p2:{}2qq".format(int(p1row[-3]), ms[0], ms[1], int(p2row[-3]))
+	boardString = "             p1:{}1qq\n{}\n\n{}\n             p2:{}2qq".format(int(p1row[h.playerHealthIndex]), ms[0], ms[1], int(p2row[h.playerHealthIndex]))
 	
-	boardString = boardString.replace("1qq", "ₒ" * int(p1row[-2])).replace("2qq", "ₒ" * int(p2row[-2]))
+	boardString = boardString.replace("1qq", "ₒ" * int(p1row[h.playerManaIndex])).replace("2qq", "ₒ" * int(p2row[h.playerManaIndex]))
 	
 	if valids: displayValidMoves(h,b,1)
-	print("-"*30)
+	print("-"*30 + "[{}]".format(str(int(board[0][h.turnTrackerIndex]))))
 	print(boardString)
 	print("-"*30)
 	if valids: displayValidMoves(h,b,-1)
@@ -261,7 +274,9 @@ if __name__ == '__main__':
 	b = h.getInitBoard()
 	
 	b, n = h.getNextState(b, 1, 65)
+	display(b, True)
 	b, n = h.getNextState(b, -1, 66)
-	b, n = h.getNextState(b, 1, 65)
+	display(b, True)
+	b, n = h.getNextState(b, 1, 0)
 	display(b, True)
 	

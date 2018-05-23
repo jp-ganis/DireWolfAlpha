@@ -68,6 +68,6 @@ class FacePlayer():
 				if valid[f]==1:
 					return f
 			else:
-				return 65
+				return 63
 
 		return 0
