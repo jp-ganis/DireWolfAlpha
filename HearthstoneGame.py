@@ -57,9 +57,6 @@ class HearthstoneGame():
 		row = b[rowIndex]
 		anti = b[antiIndex]
 		
-		## update turn counter
-		b[rowIndex][self.playerTurnCountIndex] += 1
-		
 		## pass
 		if action == self.getActionSize() - 1:
 			b[0][self.turnTrackerIndex] = -player
@@ -116,7 +113,13 @@ class HearthstoneGame():
 				if anti[targetIndex + self.minionHealthIndex] <= 0:
 					for i in range(self.minionSize):	
 						anti[targetIndex + i] = 0
+		
+		## if we're out of moves, it's the other person's turn
+		if sum(self.getValidMoves(b, player)) == 1:
+			b[0][self.turnTrackerIndex] = -player
+			b[1][self.turnTrackerIndex] = -player
 			
+		
 		## check if swapping players
 		if b[0][self.turnTrackerIndex] == -player:	
 			## wake up sleeping minions
@@ -131,6 +134,9 @@ class HearthstoneGame():
 			
 			## restore mana crystals
 			row[self.playerManaIndex] = 1
+			
+			## update turn counter
+			b[rowIndex][self.playerTurnCountIndex] += 1
 					
 		## return
 		return (b, -player)
@@ -224,7 +230,12 @@ def display(board,valids=False):
 	p1row = board[0]
 	p2row = board[1]
 	
+	
 	player = board[0][h.turnTrackerIndex]
+	v = h.getValidMoves(board, player)
+	if sum(v) == 1:
+		print("FAUXTURN")
+		return
 	
 	canAttackSymbols = ["⁷", "*", ""]
 	
@@ -241,8 +252,8 @@ def display(board,valids=False):
 	print(boardString)
 	print("-"*30+ "[{}]".format(str(int(board[0][h.turnTrackerIndex]))))
 	if valids:
-		displayValidMoves(h,b,1)
-		displayValidMoves(h,b,-1)
+		displayValidMoves(h,board,1)
+		displayValidMoves(h,board,-1)
 	print("\n\n")
 	
 def displayValidMoves(game, board, player):
@@ -272,7 +283,9 @@ if __name__ == '__main__':
 	b = h.getInitBoard()
 	
 	b, n = displayTestMove(h, b, 1, 65)
-	b, n = displayTestMove(h, b, -1, 66)
-	b, n = displayTestMove(h, b, 1, 66)
 	b, n = displayTestMove(h, b, -1, 65)
+	b, n = displayTestMove(h, b, 1, 65)
+	b, n = displayTestMove(h, b, -1, 66)
+	b, n = displayTestMove(h, b, 1, 0)
+	b, n = displayTestMove(h, b, -1, 66)
 	
