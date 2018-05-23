@@ -93,8 +93,7 @@ class HearthstoneGame():
 						row[i+self.minionAttackIndex] = 2
 						row[i+self.minionHealthIndex] = 1
 						row[i+self.minionAbleIndex] = self.sleeping
-					break
-		
+						break
 		## do an attack
 		else:
 			myMinion = int(action / 9)
@@ -147,7 +146,7 @@ class HearthstoneGame():
 	def getValidMoves(self, board, player):
 		b = np.copy(board)
 		validMoves = [0 for _ in range(self.getActionSize())]
-		validMoves[self.getActionSize()-1] = 1 ## can always pass
+		validMoves[-1] = 1 ## can always pass
 		
 		## get board side row
 		rowIndex = 0 if player == 1 else 1
@@ -236,7 +235,9 @@ def display(board,valids=False):
 	for (r,m) in [(p1row, 0), (p2row, 1)]:
 		ms[m] = ''.join(["[{}/{}]{}".format(int(r[i]), int(r[i+1]), canAttackSymbols[int(r[i+2])]) for i in range(0, len(r) - 3, 3) if r[i] > 0])
 	
-	boardString = "             p1:{}\n{}\n\n{}\n             p2:{}".format(int(p1row[-3]), ms[0], ms[1], int(p2row[-3]))
+	boardString = "             p1:{}1qq\n{}\n\n{}\n             p2:{}2qq".format(int(p1row[-3]), ms[0], ms[1], int(p2row[-3]))
+	
+	boardString = boardString.replace("1qq", "ₒ" * int(p1row[-2])).replace("2qq", "ₒ" * int(p2row[-2]))
 	
 	if valids: displayValidMoves(h,b,1)
 	print("-"*30)
@@ -259,9 +260,8 @@ if __name__ == '__main__':
 	h = HearthstoneGame()
 	b = h.getInitBoard()
 	
-	b, n = h.getNextState(b, 1, 63)
-	b, n = h.getNextState(b, -1, 65)
-	b, n = h.getNextState(b, 1, 66)
+	b, n = h.getNextState(b, 1, 65)
 	b, n = h.getNextState(b, -1, 66)
+	b, n = h.getNextState(b, 1, 65)
 	display(b, True)
 	

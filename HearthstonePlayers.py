@@ -1,6 +1,13 @@
 import numpy as np
 from .HearthstoneGame import display
 
+class PassPlayer():
+	def __init__(self, game):
+		self.game = game
+
+	def play(self, board):
+		return self.game.getActionSize() - 1
+
 class RandomPlayer():
 	def __init__(self, game):
 		self.game = game
