@@ -1,7 +1,6 @@
-import sys; sys.path.insert(0, '../clean/src/fireplace')
+import sys; sys.path.insert(0, './fireplace')
 import numpy as np
 import fireplace
-import copy 
 import py
 
 def pr(player):
@@ -10,13 +9,33 @@ def test_pr():
 	assert(pr(1) == 0)
 	assert(pr(-1) == 1)
 
+def getMinionAction(minionIdx, targetIdx):
+	return minionIdx * 9 + targetIdx
+	
+def test_getMinionAction():
+	assert(getMinionAction(0, 0) == 0)
+	assert(getMinionAction(1, 0) == 9)
+	assert(getMinionAction(2, 0) == 18)
+	assert(getMinionAction(3, 3) == 27+3)
+	
+def getCardAction(cardIdx, targetIdx):
+	return cardIdx * 16 + targetIdx
+	
+def test_getCardAction():
+	assert(getCardAction(0, 0) == 0)
+	assert(getCardAction(1, 0) == 16)
+	assert(getCardAction(2, 0) == 32)
+	assert(getCardAction(3, 3) == 48+3)
+	
 class Game():
 	def __init__(self):
+		self.deckTrackerIndex = -5
+		self.turnTrackerIndex = -4
 		self.playerHealthIndex = -3
 		self.playerManaIndex = -2
-		self.playerCardsInHandIndex = -1
+		self.playerCardsIndex = -1
 		self.starterDeck = [0,1,2,3,4]
-		self.deckTrackerIndices = [i for i in range(self.playerHealthIndex-1, self.playerHealthIndex-len(self.starterDeck)-1, -1)]
+		self.deckTrackerIndices = [i for i in range(self.deckTrackerIndex, self.deckTrackerIndex-len(self.starterDeck), -1)]
 
 		self.hpSize = 1
 		self.manaSize = 1
@@ -27,6 +46,10 @@ class Game():
 
 		self.playerSize = self.hpSize + self.manaSize + self.cardsInHandSize + self.deckSize
 		self.minionSize = 4
+		
+		self.dt_CardInDeck = 0
+		self.dt_CardInHand = 1
+		self.dt_CardPlayed = 2
 
 	def getInitBoard(self):
 		"""
@@ -40,7 +63,7 @@ class Game():
 				row = board[i]
 				row[self.playerHealthIndex] = 30
 				row[self.playerManaIndex] = 1
-				row[self.playerCardsInHandIndex] = 3
+				row[self.playerCardsIndex] = 3
 
 		return board
 
@@ -51,6 +74,8 @@ class Game():
 		"""
 		## player array size = 7 * minionSize + hp + mana + #cards_in_hand + deck_tracker
 		self.boardRowSize = 7 * self.minionSize + self.hpSize + self.manaSize + self.cardsInHandSize + self.deckSize
+
+
 		return (2, self.boardRowSize)
 
 	def getActionSize(self):
@@ -71,8 +96,7 @@ class Game():
 			nextBoard: board after applying action
 			nextPlayer: player who plays in the next turn (should be -player)
 		"""
-		b = copy.deepcopy(board)
-		return (b, -player)
+		pass
 
 	def getValidMoves(self, board, player):
 		"""
@@ -85,8 +109,11 @@ class Game():
 						moves that are valid from the current board and player,
 						0 for invalid moves
 		"""
+		idx = pr(player)
 		validMoves = [0 for _ in range(self.getActionSize())]
-		validMoves[-1] = 1
+		
+		
+		
 		return validMoves
 
 	def getGameEnded(self, board, player):
@@ -135,7 +162,7 @@ def test_getInitBoard():
 		row = initBoard[idx]
 		assert(row[h.playerHealthIndex] == 30)
 		assert(row[h.playerManaIndex] == 1)
-		assert(row[h.playerCardsInHandIndex] == 3)
+		assert(row[h.playerCardsIndex] == 3)
 
 		for i in h.deckTrackerIndices:
 			assert(row[i] == 0)
@@ -155,3 +182,11 @@ def test_getGameEnded():
 	board[idx][h.playerHealthIndex] = -1
 	assert(h.getGameEnded(board,-player) == 1)
 	assert(h.getGameEnded(board,player) == -1)
+
+def test_getValidMoves_initBoard():
+	player = 1
+	idx = pr(player)
+	board = h.getInitBoard()
+	
+	
+	

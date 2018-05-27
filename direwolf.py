@@ -1,5 +1,6 @@
-import sys; sys.path.insert(0, '../clean/src/fireplace')
+import sys; sys.path.insert(0, './fireplace')
 from hearthstone.enums import CardClass, CardType
+from fireplace.card import Card
 import numpy as np
 import fireplace.cards
 import fireplace
@@ -60,23 +61,52 @@ def getPlayerRow(player):
 	
 	return [minions, health, mana, int(turnTracker), maxMana, handTracker, deckTracker]
 
+	
+def injectPlayerRow(row):
+	game = setup_game()
+	player = game.players[0]
+	mis = [i for i in range(21)]
+	hi = 22
+	mi = 23
+	tti = 24
+	mma = 25
+	hti = [i for i in range(26, 30, 1)]
+	dti = [i for i in range(30, 34, 1)]
+	
+	for i in range(0,len(hti),3):
+		if mis[i] > 0:
+			card = player.card(og_deck[0])
+			print(card)
+			game.players[0].field.append(card)
+			game.players[0].hand.append(card)
+	
+	print(player.characters)
+	return getPlayerRow(player)
+	
+	
+
 if __name__ == '__main__':
 	from fireplace.player import Player
 	from fireplace.game import Game
 	import copy 
 	game = setup_game()
 	gc = copy.deepcopy(game)
+	print("\n\n\n")
+	
 	player = game.players[0]
 	
 	for card in player.hand:
 		if card.is_playable():
 			card.play()
 			break
-		
+			
+	print(game.board)
 
 	print("\n\n\n")
-	print(getPlayerRow(player))
-	print(getPlayerRow(gc.players[0]))
+	print(type(player))
+	row = getPlayerRow(player)
+	print(injectPlayerRow(row))
+	print(row)
 	#print(getPlayerRow(player))
 	#print(game.entities)
 
