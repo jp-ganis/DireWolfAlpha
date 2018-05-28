@@ -1,9 +1,11 @@
-import sys; sys.path.insert(0, './fireplace')
+import sys; sys.path.insert(0, '../fireplace')
 import numpy as np
 import fireplace.cards
 import copy 
 import py
 import hs.direwolf as direwolf
+import logging; logging.getLogger("fireplace").setLevel(logging.WARNING)
+
 
 def pr(player):
 	return 0 if player == 1 else 1
@@ -43,6 +45,9 @@ class HearthstoneGame():
 		
 		self.enemyTargets = 9
 		self.totalTargets = 16
+		
+		self.passTarget = self.enemyTargets - 1
+		self.faceTarget = self.passTarget - 1
 		
 	def getInitBoard(self):
 		"""
@@ -107,10 +112,9 @@ class HearthstoneGame():
 		## attacks
 		for i in range(len(player.characters[1:])):
 			char = player.characters[1 + i]
-			
 			if char.can_attack():
-				faceIdx = self.getMinionActionIndex(i, 8)
-				passIdx = self.getMinionActionIndex(i, 9)
+				faceIdx = self.getMinionActionIndex(i, self.faceTarget)
+				passIdx = self.getMinionActionIndex(i, self.passTarget)
 				validMoves[faceIdx] = 1
 				validMoves[passIdx] = 1
 				
@@ -150,8 +154,8 @@ class HearthstoneGame():
 		minions = []
 
 		for character in player.characters[1:]:
-			minions += [character.atk, character.health, int(not character.exhausted), direwolf.og_deck.index(character.id)]
-		for _ in range(7 - (len(player.characters)-1)):
+			minions += [character.atk, character.health, int(character.can_attack()), direwolf.og_deck.index(character.id)]
+		for _ in range(self.maxMinions - (len(player.characters)-1)):
 			minions += [0 for _ in range(self.minionSize)]
 		
 		for card in direwolf.og_deck:
@@ -160,7 +164,7 @@ class HearthstoneGame():
 		
 		row = [0 for _ in range(self.getBoardSize()[1])]
 		
-		for i in range(self.minionSize * 7):
+		for i in range(self.minionSize * self.maxMinions):
 			row[i] = minions[i]
 		
 		row[self.playerCardsInHandIndex] = len(player.hand)
@@ -205,7 +209,8 @@ class HearthstoneGame():
 				if row[mi] > 0:
 					cardIdx = int(row[mi + self.minionIdIndex])
 					card = player.card(direwolf.og_deck[cardIdx])
-					player.field.append(card)
+					card.turns_in_play = 1 if row[mi + self.minionCanAttackIndex] > 0 else 0
+					player.summon(card)
 		return game
 		
 
@@ -226,14 +231,14 @@ def test_getValidMoves_oneSleepingMinion():
 	
 	board[0][0] = 1
 	board[0][1] = 0
-	board[0][2] = 1
+	board[0][2] = 0
 	board[0][3] = mId
 	
 	v = h.getValidMoves(board, 1)
-	assert(v[0] == 0)
-	assert(v[8] == 0)
-	assert(v[9] == 0)
-	assert(v[10] == 0)
+	assert(v[h.getMinionActionIndex(0, 0)] == 0)
+	assert(v[h.getMinionActionIndex(0, 2)] == 0)
+	assert(v[h.getMinionActionIndex(0, h.faceTarget)] == 0)
+	assert(v[h.getMinionActionIndex(0, h.passTarget)] == 0)
 	
 def test_getValidMoves_oneMinionAttacking():
 	board = h.getInitBoard()
@@ -248,15 +253,64 @@ def test_getValidMoves_oneMinionAttacking():
 	game.end_turn()
 	game.end_turn()
 	b = h.extractBoard(game)
-	print(b)
 	
-	v = h.getValidMoves(board, 1)
+	v = h.getValidMoves(b, 1)
+	assert(v[h.getMinionActionIndex(0, 0)] == 0)
+	assert(v[h.getMinionActionIndex(0, 2)] == 0)
+	assert(v[h.getMinionActionIndex(0, h.faceTarget)] == 1)
+	assert(v[h.getMinionActionIndex(0, h.passTarget)] == 1)
+
+def test_getValidMoves_oneMinionAttacking_oneMinionDefending_player1():
+	board = h.getInitBoard()
+	mId = 1
 	
-	assert(v[0] == 0)
-	assert(v[8] == 1)
-	assert(v[9] == 1)
-	assert(v[10] == 0)
+	board[0][0] = 1
+	board[0][1] = 0
+	board[0][2] = 0
+	board[0][3] = mId
 	
+	board[1][0] = 1
+	board[1][1] = 0
+	board[1][2] = 0
+	board[1][3] = mId
+	
+	game = h.injectBoard(board)
+	
+	game.end_turn()
+	game.end_turn()
+	b = h.extractBoard(game)
+	
+	v = h.getValidMoves(b, 1)
+	assert(v[h.getMinionActionIndex(0, 0)] == 1)
+	assert(v[h.getMinionActionIndex(0, 2)] == 0)
+	assert(v[h.getMinionActionIndex(0, h.faceTarget)] == 1)
+	assert(v[h.getMinionActionIndex(0, h.passTarget)] == 1)
+	
+def test_getValidMoves_oneMinionAttacking_oneMinionDefending_player2():
+	board = h.getInitBoard()
+	mId = 1
+	
+	board[0][0] = 1
+	board[0][1] = 0
+	board[0][2] = 0
+	board[0][3] = mId
+	
+	board[1][0] = 1
+	board[1][1] = 0
+	board[1][2] = 0
+	board[1][3] = mId
+	
+	game = h.injectBoard(board)
+	
+	game.end_turn()
+	game.end_turn()
+	b = h.extractBoard(game)
+	
+	v = h.getValidMoves(b, -1)
+	assert(v[h.getMinionActionIndex(0, 0)] == 1)
+	assert(v[h.getMinionActionIndex(0, 2)] == 0)
+	assert(v[h.getMinionActionIndex(0, h.faceTarget)] == 1)
+	assert(v[h.getMinionActionIndex(0, h.passTarget)] == 1)
 
 	
 def test_injectAndExtract():
