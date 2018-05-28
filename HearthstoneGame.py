@@ -1,9 +1,9 @@
-import sys; sys.path.insert(0, './hs/fireplace')
+import sys; sys.path.insert(0, './fireplace')
 import numpy as np
 import fireplace.cards
 import copy 
 import py
-import direwolf
+import hs.direwolf as direwolf
 
 def pr(player):
 	return 0 if player == 1 else 1
@@ -13,24 +13,34 @@ def test_pr():
 
 class HearthstoneGame():
 	def __init__(self):
-		fireplace.cards.filter(name="Garrosh")
-		game = direwolf.setup_game()
+		self.maxMinions = 7
+		self.minionSize = 4
+		self.deckSize = 5
+
+		self.minionSize = 4
+		
+		self.playerTurnTrackerIndex = -4
 		self.playerHealthIndex = -3
 		self.playerManaIndex = -2
 		self.playerCardsInHandIndex = -1
+		
 		self.starterDeck = [0,1,2,3,4]
-		self.deckTrackerIndices = [i for i in range(self.playerHealthIndex-1, self.playerHealthIndex-len(self.starterDeck)-1, -1)]
+		
+		self.deckTrackerStartingIndex = -5
+		self.deckTrackerIndices = [i for i in range(self.deckTrackerStartingIndex, self.deckTrackerStartingIndex-self.deckSize, -1)]
+		
+		self.handTrackerStartingIndex = self.deckTrackerIndices[-1] - 1
+		self.handTrackerIndices = [i for i in range(self.handTrackerStartingIndex, self.handTrackerStartingIndex-self.deckSize, -1)]
+		
+		self.playerMaxManaIndex = self.handTrackerIndices[-1] - 1
 
-		self.hpSize = 1
-		self.manaSize = 1
-		self.cardsInHandSize = 1
-
-		self.minionSize = 3
-		self.deckSize = 5
-
-		self.playerSize = self.hpSize + self.manaSize + self.cardsInHandSize + self.deckSize
-		self.minionSize = 4
-
+		self.playerSize = sum([1 for _ in [self.playerHealthIndex, self.playerManaIndex, self.playerMaxManaIndex, self.playerTurnTrackerIndex]]) + len(self.deckTrackerIndices) + len(self.handTrackerIndices)
+		
+		self.minionAttackIndex = 0
+		self.minionHealthIndex = 1
+		self.minionCanAttackIndex = 2
+		self.minionIdIndex = 3
+		
 	def getInitBoard(self):
 		"""
 		Returns:
@@ -43,7 +53,9 @@ class HearthstoneGame():
 				row = board[i]
 				row[self.playerHealthIndex] = 30
 				row[self.playerManaIndex] = 1
+				row[self.playerMaxManaIndex] = 1
 				row[self.playerCardsInHandIndex] = 3
+		board[0][self.playerTurnTrackerIndex] = 1
 
 		return board
 
@@ -53,7 +65,7 @@ class HearthstoneGame():
 			(x,y): a tuple of board dimensions
 		"""
 		## player array size = 7 * minionSize + hp + mana + #cards_in_hand + deck_tracker
-		self.boardRowSize = 7 * self.minionSize + self.hpSize + self.manaSize + self.cardsInHandSize + self.deckSize
+		self.boardRowSize = self.maxMinions * self.minionSize + self.playerSize
 		return (2, self.boardRowSize)
 
 	def getActionSize(self):
@@ -124,15 +136,127 @@ class HearthstoneGame():
 						 Required by MCTS for hashing.
 		"""
 		return board.tostring()
+		
+		
+	def getPlayerRow(self, player):
+		handTracker = [card for card in direwolf.og_deck]
+		deckTracker = [card for card in direwolf.og_deck]
+
+		minions = []
+
+		for character in player.characters[1:]:
+			minions += [character.atk, character.health, int(character.can_attack()), direwolf.og_deck.index(character.id)]
+		for _ in range(7 - (len(player.characters)-1)):
+			minions += [0 for _ in range(self.minionSize)]
+		
+		for card in direwolf.og_deck:
+			handTracker[handTracker.index(card)] = int( card in [i.id for i in player.hand] )
+			deckTracker[deckTracker.index(card)] = int( card in [i.id for i in player.deck] )
+		
+		row = [0 for _ in range(self.getBoardSize()[1])]
+		
+		for i in range(self.minionSize * 7):
+			row[i] = minions[i]
+		
+		row[self.playerCardsInHandIndex] = len(player.hand)
+		row[self.playerHealthIndex] = player.health
+		row[self.playerManaIndex] = player.mana
+		row[self.playerMaxManaIndex] = player.max_mana
+		row[self.playerTurnTrackerIndex] = int(player.current_player)
+		
+		return row
+
+	
+	def injectBoard(self, board):
+		game = direwolf.setup_game()
+		
+		for idx in [0,1]:		
+			player = game.players[idx]
+			row = board[idx]
+			
+			mis = [i*self.minionSize for i in range(7)]
+			hi = self.playerHealthIndex
+			mi = self.playerManaIndex
+			tti = self.playerTurnTrackerIndex
+			mma = self.playerMaxManaIndex
+			hti = [i for i in range(32, 36, 1)]
+			dti = [i for i in range(36, 40, 1)]
+			
+			if tti == 1: 
+				game.current_player = player
+			
+			player.hand = []
+			player.deck = []
+			player.health = row[hi]
+			player.max_mana = int(row[mma])
+			player.used_mana = int(row[mma] - row[mi])
+			
+			for mi in mis:
+				if row[mi] > 0:
+					cardIdx = int(row[mi + self.minionIdIndex])
+					card = player.card(direwolf.og_deck[cardIdx])
+					player.field.append(card)
+		return game
+		
 
 def display(board):
 		pass
 
 ## -- tests -- ##
 h=HearthstoneGame()
-def test_getBoardSize():
-	assert(h.getBoardSize() == (2, 36))
 
+def test_init():
+	pass
+
+	
+def test_getPlayerRow():
+	board = h.getInitBoard()
+	mId = 1
+	
+	board[0][0] = 1
+	board[0][1] = 0
+	board[0][2] = 0
+	board[0][3] = mId
+	
+	game = h.injectBoard(board)
+	
+	for i in [0,1]:
+		row = h.getPlayerRow(game.players[i])
+		assert(row[h.playerHealthIndex] == 30)
+		assert(row[h.playerManaIndex] == 1)
+		assert(row[h.playerMaxManaIndex] == 1)
+	
+	row = h.getPlayerRow(game.players[0])
+	assert(row[0] == 2)
+	assert(row[1] == 3)
+	assert(row[2] == 0)
+	assert(row[3] == mId)
+	
+def test_injectBoard():
+	board = h.getInitBoard()
+	mId = 1
+	
+	board[0][0] = 1
+	board[0][1] = 0
+	board[0][2] = 0
+	board[0][3] = mId
+	
+	game = h.injectBoard(board)
+	
+	for i in [0,1]:
+		player = game.players[i]
+		assert(player.health == 30)
+		assert(player.mana == 1)
+		assert(player.max_mana == 1)
+	assert(game.board[0].id == direwolf.og_deck[mId])
+	assert(game.current_player == game.players[0])
+	assert(len(game.board) == 1)
+	
+	
+def test_getBoardSize():
+	assert(h.getBoardSize() == (2, 7 * h.minionSize + h.playerSize))
+
+	
 def test_getInitBoard():
 	initBoard = h.getInitBoard()
 

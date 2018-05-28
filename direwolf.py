@@ -59,29 +59,48 @@ def getPlayerRow(player):
 		handTracker[handTracker.index(card)] = int( card in [i.id for i in player.hand] )
 		deckTracker[deckTracker.index(card)] = int( card in [i.id for i in player.deck] )
 	
-	return [minions, health, mana, int(turnTracker), maxMana, handTracker, deckTracker]
+	return minions + [health, mana, int(turnTracker), maxMana] + handTracker + deckTracker
 
 	
-def injectPlayerRow(row):
+def injectBoard(board):
 	game = setup_game()
-	player = game.players[0]
-	mis = [i for i in range(21)]
-	hi = 22
-	mi = 23
-	tti = 24
-	mma = 25
-	hti = [i for i in range(26, 30, 1)]
-	dti = [i for i in range(30, 34, 1)]
 	
-	for i in range(0,len(hti),3):
-		if mis[i] > 0:
-			card = player.card(og_deck[0])
-			print(card)
-			game.players[0].field.append(card)
-			game.players[0].hand.append(card)
+	for idx in [0,1]:		
+		player = game.players[idx]
+		row = board[idx]
+		
+		mis = [i for i in range(28)]
+		hi = 29
+		mi = 30
+		tti = 31
+		mma = 32
+		hti = [i for i in range(32, 36, 1)]
+		dti = [i for i in range(36, 40, 1)]
+		
+		if tti == 1: 
+			game.current_player = player
+		
+		player.hand = []
+		player.deck = []
+		player.health = row[hi]
+		player.max_mana = int(row[mma])
+		player.used_mana = int(row[mma] - row[mi])
+		
+		for i in range(0,len(hti),3):
+			if mis[i] > 0:
+				card = player.card(og_deck[0])
+				player.field.append(card)
+				player.hand.append(card)
+				
+		for i in range(0,len(dti),3):
+			if mis[i] > 0:
+				card = player.card(og_deck[0])
+				player.field.append(card)
+				player.hand.append(card)
+				
+	return game
 	
-	print(player.characters)
-	return getPlayerRow(player)
+	
 	
 	
 
@@ -91,7 +110,6 @@ if __name__ == '__main__':
 	import copy 
 	game = setup_game()
 	gc = copy.deepcopy(game)
-	print("\n\n\n")
 	
 	player = game.players[0]
 	
@@ -100,13 +118,11 @@ if __name__ == '__main__':
 			card.play()
 			break
 			
-	print(game.board)
-
-	print("\n\n\n")
-	print(type(player))
 	row = getPlayerRow(player)
-	print(injectPlayerRow(row))
-	print(row)
-	#print(getPlayerRow(player))
-	#print(game.entities)
+	
+	board = np.zeros((2,len(row)))
+	board[0] = row
+	board[1] = row
+	board[0][30] = 3
+	board[0][32] = 5
 
