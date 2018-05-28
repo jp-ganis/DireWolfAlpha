@@ -86,17 +86,49 @@ class HearthstoneGame():
 	def getMinionActionIndex(self, minionIdx, targetIdx):
 		return minionIdx * self.enemyTargets + targetIdx
 
-	def getCardActionIndex(self, cardIdx, targetIdx):
-		return 64 + cardIdx * self.totalTargets + targetIdx
+	def extractMinionAction(self, idx):
+		base = int(idx / self.enemyTargets)
+		remainder = idx % self.enemyTargets
+		return base, remainder
 
+	def getCardActionIndex(self, cardIdx, targetIdx):
+		return self.maxMinions * self.enemyTargets + cardIdx * self.totalTargets + targetIdx
+
+	def extractCardAction(self, idx):
+		idx -= self.maxMinions * self.enemyTargets
+		base = int(idx / self.totalTargets)
+		remainder = idx % self.totalTargets
+		return base, remainder
+	
 	def getNextState(self, board, player, action):
 		b = np.copy(board)
-		
+
+		game = self.injectBoard(b)
+		idx = pr(player)
+		jdx = pr(-player)
+
+		if action <= self.maxMinions * self.enemyTargets:
+			attacker, target = self.extractMinionAction(action)
+			minion = game.players[idx].field[attacker]
+			
+			if target == self.faceTarget:
+				game.players[idx].field[attacker].attack(game.players[jdx].characters[0])
+
+		elif action > self.maxMinions * self.enemyTargets and action <= 10 * self.totalTargets:
+			card, target = self.extractCardAction(action)
+
+		elif action == self.getActionSize() - 1:
+			game.end_turn()
+
+		b = self.extractBoard(game)
 		return (b, -player)
 
 	def getValidMoves(self, board, player):
 		validMoves = [0 for _ in range(self.getActionSize())]
 		validMoves[-1] = 1
+
+		if board[pr(player)][self.playerTurnTrackerIndex] == 0:
+			return validMoves
 		
 		game = self.injectBoard(board)
 		enemyPlayer = game.players[pr(-player)]
@@ -112,7 +144,7 @@ class HearthstoneGame():
 		## attacks
 		for i in range(len(player.characters[1:])):
 			char = player.characters[1 + i]
-			if char.can_attack():
+			if char.can_attack(debug=False):
 				faceIdx = self.getMinionActionIndex(i, self.faceTarget)
 				passIdx = self.getMinionActionIndex(i, self.passTarget)
 				validMoves[faceIdx] = 1
@@ -147,7 +179,7 @@ class HearthstoneGame():
 	def stringRepresentation(self, board):
 		return board.tostring()
 		
-	def getPlayerRow(self, player):
+	def extractRow(self, player):
 		handTracker = [card for card in direwolf.og_deck]
 		deckTracker = [card for card in direwolf.og_deck]
 
@@ -168,7 +200,7 @@ class HearthstoneGame():
 			row[i] = minions[i]
 		
 		row[self.playerCardsInHandIndex] = len(player.hand)
-		row[self.playerHealthIndex] = player.health
+		row[self.playerHealthIndex] = player.characters[0].health
 		row[self.playerManaIndex] = player.mana
 		row[self.playerMaxManaIndex] = player.max_mana
 		row[self.playerTurnTrackerIndex] = int(player.current_player)
@@ -177,8 +209,8 @@ class HearthstoneGame():
 
 	def extractBoard(self, game):
 		b = np.zeros(self.getBoardSize())
-		b[0] = self.getPlayerRow(game.players[0])
-		b[1] = self.getPlayerRow(game.players[1])
+		b[0] = self.extractRow(game.players[0])
+		b[1] = self.extractRow(game.players[1])
 		return b
 	
 	def injectBoard(self, board):
@@ -196,12 +228,12 @@ class HearthstoneGame():
 			hti = [i for i in self.handTrackerIndices]
 			dti = [i for i in self.deckTrackerIndices]
 			
-			if tti == 1: 
+			if row[tti] == 1: 
 				game.current_player = player
 			
 			player.hand = []
 			player.deck = []
-			player.health = row[hi]
+			player.hero.damage = player.hero.max_health - row[hi]
 			player.max_mana = int(row[mma])
 			player.used_mana = int(row[mma] - row[mi])
 			
@@ -219,7 +251,46 @@ def display(board):
 
 ## -- tests -- ##
 h=HearthstoneGame()
+
+def test_getNextState_blankPass_player1():
+	board = h.getInitBoard()
+	action = h.getActionSize() - 1
+	player = 1
+
+	nextBoard, nextPlayer = h.getNextState(board, player, action)
+	assert(nextPlayer == -1)
+	assert(nextBoard[0][h.playerTurnTrackerIndex] == 0)
 	
+def test_getNextState_blankPass_player2():
+	board = h.getInitBoard()
+	game = h.injectBoard(board)
+	game.end_turn()
+	board = h.extractBoard(game)
+	action = h.getActionSize() - 1
+	player = -1
+
+	nextBoard, nextPlayer = h.getNextState(board, player, action)
+	assert(nextPlayer == -player)
+	assert(nextBoard[0][h.playerTurnTrackerIndex] == 1)
+
+def test_getNextState_minionGoesFace_player2():
+	board = h.getInitBoard()
+	board[1][0] = 1
+	board[1][1] = 0
+	board[1][2] = 1
+	board[1][3] = 1
+
+	game = h.injectBoard(board)
+	game.end_turn()
+
+	board = h.extractBoard(game)
+	action = h.getMinionActionIndex(0, h.faceTarget)
+	player = -1
+
+	nextBoard, nextPlayer = h.getNextState(board, player, action)
+	assert(nextBoard[0][h.playerHealthIndex] == 28)
+
+
 def test_getValidMoves_onlyPass():
 	board = h.getInitBoard()
 	validMoves = h.getValidMoves(board, 1)
@@ -301,9 +372,8 @@ def test_getValidMoves_oneMinionAttacking_oneMinionDefending_player2():
 	board[1][3] = mId
 	
 	game = h.injectBoard(board)
-	
 	game.end_turn()
-	game.end_turn()
+
 	b = h.extractBoard(game)
 	
 	v = h.getValidMoves(b, -1)
@@ -324,12 +394,12 @@ def test_injectAndExtract():
 	
 	irow = board[0]
 	game = h.injectBoard(board)
-	prow = h.getPlayerRow(game.players[0])
+	prow = h.extractRow(game.players[0])
 	
 	assert(len(irow) == len(prow))
 	assert([irow[i] == prow[i] for i in range(len(irow))])
 	
-def test_getPlayerRow():
+def test_extractRow():
 	board = h.getInitBoard()
 	mId = 1
 	
@@ -341,17 +411,16 @@ def test_getPlayerRow():
 	game = h.injectBoard(board)
 	
 	for i in [0,1]:
-		row = h.getPlayerRow(game.players[i])
+		row = h.extractRow(game.players[i])
 		assert(row[h.playerHealthIndex] == 30)
 		assert(row[h.playerManaIndex] == 1)
 		assert(row[h.playerMaxManaIndex] == 1)
 	
-	row = h.getPlayerRow(game.players[0])
+	row = h.extractRow(game.players[0])
 	assert(row[0] == 2)
 	assert(row[1] == 3)
 	assert(row[2] == 0)
 	assert(row[3] == mId)
-	
 	
 def test_injectBoard():
 	board = h.getInitBoard()
@@ -366,17 +435,15 @@ def test_injectBoard():
 	
 	for i in [0,1]:
 		player = game.players[i]
-		assert(player.health == 30)
+		assert(player.hero.health == 30)
 		assert(player.mana == 1)
 		assert(player.max_mana == 1)
 	assert(game.board[0].id == direwolf.og_deck[mId])
 	assert(game.current_player == game.players[0])
 	assert(len(game.board) == 1)
 	
-	
 def test_getBoardSize():
 	assert(h.getBoardSize() == (2, 7 * h.minionSize + h.playerSize))
-
 	
 def test_getInitBoard():
 	initBoard = h.getInitBoard()
@@ -389,17 +456,14 @@ def test_getInitBoard():
 
 		for i in h.deckTrackerIndices:
 			assert(row[i] == 0)
-
 			
 def test_getActionSize():
 	assert(h.getActionSize() == 240)
-
 	
 def test_getGameEnded_draw():
 	player = 1
 	board = h.getInitBoard()
 	assert(h.getGameEnded(board,player) == 0)
-
 	
 def test_getGameEnded():
 	player = 1
@@ -408,13 +472,21 @@ def test_getGameEnded():
 	board[idx][h.playerHealthIndex] = -1
 	assert(h.getGameEnded(board,-player) == 1)
 	assert(h.getGameEnded(board,player) == -1)
-
 	
 def test_getMinionActionIndex():
 	assert(h.getMinionActionIndex(0,0) == 0)
 	assert(h.getMinionActionIndex(1,0) == h.enemyTargets)
-
 	
 def test_getCardActionIndex():
-	assert(h.getCardActionIndex(0,0) == 64)
-	assert(h.getCardActionIndex(1,0) == 64 + h.totalTargets)
+	assert(h.getCardActionIndex(0,0) == h.maxMinions * h.enemyTargets)
+	assert(h.getCardActionIndex(1,0) == h.maxMinions * h.enemyTargets + h.totalTargets)
+
+def test_extractMinionAction():
+	idx = h.getMinionActionIndex(3, 4)
+	assert(h.extractMinionAction(idx)[0] == 3)
+	assert(h.extractMinionAction(idx)[1] == 4)
+
+def test_extractCardAction():
+	idx = h.getCardActionIndex(9, 11)
+	assert(h.extractCardAction(idx)[0] == 9)
+	assert(h.extractCardAction(idx)[1] == 11)
