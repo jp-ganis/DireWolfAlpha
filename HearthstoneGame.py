@@ -5,6 +5,8 @@ import copy
 import py
 import hs.direwolf as direwolf
 import logging; logging.getLogger("fireplace").setLevel(logging.WARNING)
+from hearthstone.enums import Zone
+	
 
 
 def pr(player):
@@ -112,10 +114,19 @@ class HearthstoneGame():
 			minion = game.players[idx].field[attacker]
 			
 			if target == self.faceTarget:
-				game.players[idx].field[attacker].attack(game.players[jdx].characters[0])
+				minion.attack(game.players[jdx].characters[0])
+			elif target == self.passTarget:
+				pass
+			else:
+				minion.attack(game.players[jdx].characters[target+1])
 
 		elif action > self.maxMinions * self.enemyTargets and action <= 10 * self.totalTargets:
-			card, target = self.extractCardAction(action)
+			cardIdx, target = self.extractCardAction(action)
+
+			if target == self.passTarget:
+				card = game.players[idx].hand[cardIdx]
+				card.is_playable(debug=True)
+				card.play()
 
 		elif action == self.getActionSize() - 1:
 			game.end_turn()
@@ -243,6 +254,13 @@ class HearthstoneGame():
 					card = player.card(direwolf.og_deck[cardIdx])
 					card.turns_in_play = 1 if row[mi + self.minionCanAttackIndex] > 0 else 0
 					player.summon(card)
+
+			for i in hti:
+				if row[i] == 1:
+					card = player.card(direwolf.og_deck[i - self.handTrackerStartingIndex])
+					card.zone = Zone.HAND
+					player.hand.append(card)
+
 		return game
 		
 
@@ -251,6 +269,19 @@ def display(board):
 
 ## -- tests -- ##
 h=HearthstoneGame()
+
+def test_getNextState_playCard_player1():
+	board = h.getInitBoard()
+
+	board[0][h.handTrackerIndices[0]] = 1
+
+	game = h.injectBoard(board)
+	action = h.getCardActionIndex(0, h.passTarget)
+	player = 1
+
+	nextBoard, nextPlayer = h.getNextState(board, player, action)
+	assert(nextPlayer == -1)
+	assert(nextBoard[0][0] == 1)
 
 def test_getNextState_blankPass_player1():
 	board = h.getInitBoard()
@@ -290,6 +321,55 @@ def test_getNextState_minionGoesFace_player2():
 	nextBoard, nextPlayer = h.getNextState(board, player, action)
 	assert(nextBoard[0][h.playerHealthIndex] == 28)
 
+def test_getNextState_oneMinionAttacking_oneMinionDefending_player1():
+	board = h.getInitBoard()
+	mId = 1
+
+	board[0][0] = 1
+	board[0][1] = 0
+	board[0][2] = 0
+	board[0][3] = mId
+	
+	board[1][0] = 1
+	board[1][1] = 0
+	board[1][2] = 0
+	board[1][3] = mId
+	
+	game = h.injectBoard(board)
+	game.end_turn()
+	game.end_turn()
+	b = h.extractBoard(game)
+	
+	b, p = h.getNextState(b, 1, h.getMinionActionIndex(0, 0))
+
+	assert(p == -1)
+	assert(b[0][1] == 1)
+	assert(b[1][1] == 1)
+
+
+def test_getNextState_oneMinionAttacking_oneMinionDefending_player2():
+	board = h.getInitBoard()
+	mId = 1
+
+	board[0][0] = 1
+	board[0][1] = 0
+	board[0][2] = 0
+	board[0][3] = mId
+	
+	board[1][0] = 1
+	board[1][1] = 0
+	board[1][2] = 0
+	board[1][3] = mId
+	
+	game = h.injectBoard(board)
+	game.end_turn()
+	b = h.extractBoard(game)
+	
+	b, p = h.getNextState(b, -1, h.getMinionActionIndex(0, 0))
+
+	assert(p == 1)
+	assert(b[0][1] == 1)
+	assert(b[1][1] == 1)
 
 def test_getValidMoves_onlyPass():
 	board = h.getInitBoard()
@@ -441,9 +521,17 @@ def test_injectBoard():
 	assert(game.board[0].id == direwolf.og_deck[mId])
 	assert(game.current_player == game.players[0])
 	assert(len(game.board) == 1)
+
+def test_injectBoard_handIndex():
+	board = h.getInitBoard()
+
+	board[0][h.handTrackerIndices[0]] = 1
+
+	game = h.injectBoard(board)
+	assert(game.players[0].hand[0].id == direwolf.og_deck[0])
 	
 def test_getBoardSize():
-	assert(h.getBoardSize() == (2, 7 * h.minionSize + h.playerSize))
+	assert(h.getBoardSize() == (2, h.maxMinions * h.minionSize + h.playerSize))
 	
 def test_getInitBoard():
 	initBoard = h.getInitBoard()
