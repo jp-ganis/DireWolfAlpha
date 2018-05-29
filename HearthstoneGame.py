@@ -1,13 +1,14 @@
-import sys; sys.path.insert(0, '../fireplace')
-import numpy as np
+import sys; sys.path.insert(0, '../fireplace'); sys.path.insert(0, './fireplace')
+from fireplace.exceptions import GameOver
+from hearthstone.enums import Zone
+import hs.direwolf as direwolf
 import fireplace.cards
+import numpy as np
+import pytest
 import copy 
 import py
-import hs.direwolf as direwolf
+
 import logging; logging.getLogger("fireplace").setLevel(logging.WARNING)
-from hearthstone.enums import Zone
-import pytest
-from fireplace.exceptions import GameOver
 	
 def pr(player):
 	return 0 if player == 1 else 1
@@ -17,10 +18,10 @@ def test_pr():
 
 class HearthstoneGame():
 	def __init__(self):
-		self.startingHealth = 10
+		self.startingHealth = 3
 		self.maxMinions = 7
 		self.minionSize = 4
-		self.deckSize = 5
+		self.deckSize = len(direwolf.og_deck)
 
 		self.minionSize = 4
 		
@@ -28,8 +29,6 @@ class HearthstoneGame():
 		self.playerHealthIndex = -3
 		self.playerManaIndex = -2
 		self.playerCardsInHandIndex = -1
-		
-		self.starterDeck = [0,1,2,3,4]
 		
 		self.deckTrackerStartingIndex = -5
 		self.deckTrackerIndices = [i for i in range(self.deckTrackerStartingIndex, self.deckTrackerStartingIndex-self.deckSize, -1)]
@@ -62,10 +61,11 @@ class HearthstoneGame():
 
 		for i in [0,1]:
 				row = board[i]
-				row[self.playerHealthIndex] = 3
+				row[self.playerHealthIndex] = self.startingHealth
 				row[self.playerManaIndex] = 1
 				row[self.playerMaxManaIndex] = 1
-				row[self.playerCardsInHandIndex] = 3
+				row[self.playerCardsInHandIndex] = 0
+				for j in self.deckTrackerIndices: row[j] = 1
 		board[0][self.playerTurnTrackerIndex] = 1
 
 		return board
@@ -103,6 +103,19 @@ class HearthstoneGame():
 		remainder = idx % self.totalTargets
 		return base, remainder
 	
+	def extractAction(self, action):
+		if action <= self.maxMinions * self.enemyTargets:
+			a,b = self.extractMinionAction(action)
+			return ("attack", a, b)
+
+		elif action > self.maxMinions * self.enemyTargets and action <= 10 * self.totalTargets:
+			a,b = self.extractCardAction(action)
+			return ("card", a, b) 
+		
+		elif action == self.getActionSize() - 1:
+			return ("pass", 0 , 0)
+		
+	
 	def getNextState(self, board, player, action):
 		b = np.copy(board)
 
@@ -134,7 +147,7 @@ class HearthstoneGame():
 				game.end_turn()
 			except GameOver:
 				pass
-				
+		
 		b = self.extractBoard(game)
 		return (b, -player)
 
@@ -153,7 +166,7 @@ class HearthstoneGame():
 		for i in range(len(player.hand)):
 			card = player.hand[i]
 			if card.is_playable():
-				cIdx = self.getCardActionIndex(i, 0)
+				cIdx = self.getCardActionIndex(i, self.passTarget)
 				validMoves[cIdx] = 1
 				
 		## attacks
@@ -174,6 +187,8 @@ class HearthstoneGame():
 	def getGameEnded(self, board, player):
 		idx = pr(player)
 		jdx = pr(-player)
+		
+		if board[idx][self.playerMaxManaIndex] >= 5: return 1e-4
 		if board[idx][self.playerHealthIndex] <= 0: return -1
 		if board[jdx][self.playerHealthIndex] <= 0: return 1
 		return 0
@@ -213,12 +228,18 @@ class HearthstoneGame():
 		
 		for i in range(self.minionSize * self.maxMinions):
 			row[i] = minions[i]
-		
+			
 		row[self.playerCardsInHandIndex] = len(player.hand)
 		row[self.playerHealthIndex] = player.characters[0].health
 		row[self.playerManaIndex] = player.mana
 		row[self.playerMaxManaIndex] = player.max_mana
 		row[self.playerTurnTrackerIndex] = int(player.current_player)
+		
+		for i in self.handTrackerIndices:
+			row[i] = handTracker[self.handTrackerIndices.index(i)]
+		
+		for i in self.deckTrackerIndices:
+			row[i] = deckTracker[self.deckTrackerIndices.index(i)]
 		
 		return row
 
@@ -261,19 +282,163 @@ class HearthstoneGame():
 
 			for i in hti:
 				if row[i] == 1:
-					card = player.card(direwolf.og_deck[i - self.handTrackerStartingIndex])
+					card = player.card(direwolf.og_deck[self.handTrackerIndices.index(i)])
 					card.zone = Zone.HAND
-					player.hand.append(card)
-
+			
+			for i in dti:
+				if row[i] == 1:
+					card = player.card(direwolf.og_deck[self.deckTrackerIndices.index(i)])
+					card.zone = Zone.DECK
+					
 		return game
 		
-
+def listValidMoves(board, player):
+	h = HearthstoneGame()
+	
+	try:
+		v = h.getValidMoves(board, player)
+	except GameOver:
+		return []
+	
+	l = [i for i in range(len(v)) if v[i] == 1]
+	return l
+		
 def display(board):
-	pass
+	h = HearthstoneGame()
+	
+	print(' '.join(["[{}:{} {} ({})]".format(h.extractAction(l)[0], h.extractAction(l)[1], h.extractAction(l)[2], l) for l in listValidMoves(board, 1)]))
+	print()
+	
+	j = 0
+	print(int(board[j][h.playerHealthIndex]), int(board[j][h.playerManaIndex]), [direwolf.og_deck_names[h.handTrackerIndices.index(i)] for i in h.handTrackerIndices if board[j][i] == 1], "*" if board[j][h.playerTurnTrackerIndex] == 1 else "")
+	print([(int(board[j][i]),int(board[j][i+1]), "⁷" if board[j][i+2]==0 else "") for i in range(0, 28, 4) if board[j][i]>0])
+	
+	print()
+	
+	j = 1
+	print(["{}/{}{}".format(int(board[j][i]),int(board[j][i+1]), "⁷" if board[j][i+2]==0 else "") for i in range(0, 28, 4) if board[j][i]>0])
+	print(int(board[j][h.playerHealthIndex]), int(board[j][h.playerManaIndex]), [direwolf.og_deck_names[h.handTrackerIndices.index(i)] for i in h.handTrackerIndices if board[j][i] == 1], "*" if board[j][h.playerTurnTrackerIndex] == 1 else "")
+	
+	print()
+	print(' '.join(["[{}:{} {} ({})]".format(h.extractAction(l)[0], h.extractAction(l)[1], h.extractAction(l)[2], l) for l in listValidMoves(board, -1)]))
+	
+	
+	print("\n\n")
 
 ## -- tests -- ##
 h=HearthstoneGame()
 
+def test_gameSim_ragerAttack():
+	board = h.getInitBoard()
+	mId = 1
+	
+	p = 1
+	board, p = h.getNextState(board, p, 239)
+	board, p = h.getNextState(board, p, 239)
+	board, p = h.getNextState(board, p, 239)
+	board, p = h.getNextState(board, p, h.getCardActionIndex(0, 8))
+	board, p = h.getNextState(board, p, 239)
+	board, p = h.getNextState(board, p, 239)
+	
+	display(board)
+	
+	v = h.getValidMoves(board, -1)
+	assert(v[h.getMinionActionIndex(0, 7)] == 1)
+
+def test_gameSim_ragerPlayable():
+	board = h.getInitBoard()
+	mId = 1
+	
+	game = h.injectBoard(board)
+	
+	p = 1
+	board, p = h.getNextState(board, p, 239)
+	board, p = h.getNextState(board, p, 239)
+	board, p = h.getNextState(board, p, 239)
+	
+	display(board)
+	
+	v = h.getValidMoves(board, p)
+	assert(v[h.getCardActionIndex(0,8)] == 1)
+
+def test_getNextState_cardsPlayedThisTurn():
+	board = h.getInitBoard()
+
+	board[0][h.handTrackerIndices[0]] = 1
+
+	game = h.injectBoard(board)
+	action = h.getCardActionIndex(0, h.passTarget)
+	player = 1
+	nextBoard, nextPlayer = h.getNextState(board, player, action)
+	
+	assert(game.players[0].cards_played_this_turn == 0)
+
+def test_injectExtractMatch():
+	board = h.getInitBoard()
+	game = h.injectBoard(board)
+	nboard = h.extractBoard(game)
+	
+	for i in range(len(board[0])):
+		assert(board[0][i] == nboard[0][i])
+	
+def test_getValidMoves_summonAllMinions():
+	board = h.getInitBoard()
+	
+	for j in [0,1]:
+		for i in h.handTrackerIndices:
+			board[j][i] = 1
+			board[j][h.playerManaIndex] = 10
+			
+	v0 = listValidMoves(board, 0)
+	v1 = listValidMoves(board, 1)
+	
+	cardActions = []
+	for i in range(len(h.handTrackerIndices)):
+		cardActions.append(h.getCardActionIndex(i, h.passTarget))
+	
+	assert(v0 == [h.getActionSize()-1])
+	assert(v1 == cardActions + [h.getActionSize()-1])
+	
+def test_injectBoard_allMinions():
+	board = h.getInitBoard()
+	
+	for i in h.handTrackerIndices:
+		for j in [0,1]:
+			board[j][i] = 1
+	
+	game = h.injectBoard(board)
+	
+	player = game.players[0]
+	jplayer = game.players[1]
+	
+	assert(len(player.hand) == len(direwolf.og_deck))
+	assert(len(jplayer.hand) == len(direwolf.og_deck))
+	
+def test_injectBoard_cardsInHand_afterOneTurn():
+	board = h.getInitBoard()
+	game = h.injectBoard(board)
+	player = game.players[0]
+	jplayer = game.players[1]
+	game.end_turn()
+	game.end_turn()
+	
+	assert(len(player.hand) == 1)
+	assert(len(jplayer.hand) == 1)
+	
+def test_injectBoard_cardsInHand_onInit():
+	board = h.getInitBoard()
+	game = h.injectBoard(board)
+	player = game.players[0]
+	
+	assert(len(game.players[0].hand) == 0)
+
+def test_initBoard_correctDeck():
+	board = h.getInitBoard()
+	game = h.injectBoard(board)
+	player = game.players[0]
+	
+	assert(len(player.deck) == len(direwolf.og_deck))
+	
 def test_getGameEnded_player2Win():
 	board = h.getInitBoard()
 	board[0][h.playerHealthIndex] = 0
@@ -293,8 +458,9 @@ def test_getNextState_endOfGame():
 	board = h.getInitBoard()
 	board[0][h.playerHealthIndex] = 0
 	
-	with pytest.raises(GameOver):
-		h.getNextState(board, 1, h.getActionSize()-1)
+	h.getNextState(board, 1, h.getActionSize()-1)
+	
+	assert(h.getGameEnded(board, 1) == -1)
 		
 
 def test_getNextState_playCard_player1():
@@ -398,6 +564,17 @@ def test_getNextState_oneMinionAttacking_oneMinionDefending_player2():
 	assert(b[0][1] == 1)
 	assert(b[1][1] == 1)
 
+def test_getValidMoves_playCard_player1():
+	board = h.getInitBoard()
+
+	board[0][h.handTrackerIndices[0]] = 1
+
+	game = h.injectBoard(board)
+	
+	v = h.getValidMoves(board, 1)
+	action = h.getCardActionIndex(0, h.passTarget)
+	assert(v[action] == 1)
+	
 def test_getValidMoves_onlyPass():
 	board = h.getInitBoard()
 	validMoves = h.getValidMoves(board, 1)
@@ -567,10 +744,10 @@ def test_getInitBoard():
 		row = initBoard[idx]
 		assert(row[h.playerHealthIndex] == h.startingHealth)
 		assert(row[h.playerManaIndex] == 1)
-		assert(row[h.playerCardsInHandIndex] == 3)
+		assert(row[h.playerCardsInHandIndex] == 0)
 
 		for i in h.deckTrackerIndices:
-			assert(row[i] == 0)
+			assert(row[i] == 1)
 			
 def test_getActionSize():
 	assert(h.getActionSize() == 240)

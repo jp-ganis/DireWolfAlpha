@@ -42,7 +42,6 @@ class HumanPlayer():
 				break
 			else:
 				print('Invalid')
-
 		return a
 
 		

@@ -19,6 +19,7 @@ frostbolt_id='CS2_024'
 cards = [penguin_id, river_croc_id, magma_id, yeti_id, frostbolt_id]
 cards = [penguin_id for _ in range(3)]
 og_deck = [penguin_id, river_croc_id, magma_id, yeti_id]
+og_deck_names = ["snowflipper penguin", "river crocolisk", "magma rager", "chillwind yeti"]
 
 def setup_game():
 	from fireplace.game import Game
@@ -37,7 +38,10 @@ def setup_game():
 		mull_count = 0
 		cards_to_mulligan = []
 		player.choice.choose(*cards_to_mulligan)
-
+		
+	game.end_turn()
+	game.end_turn()
+		
 	return game
 
 def getPlayerRow(player):
