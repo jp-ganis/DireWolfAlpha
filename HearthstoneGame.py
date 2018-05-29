@@ -134,7 +134,7 @@ class HearthstoneGame():
 				try:
 					minion.attack(game.players[jdx].characters[0])
 				except GameOver:
-					game.players[jdx].hero.hp = 0
+					game.players[jdx].hero.damage = game.players[jdx].hero.max_health
 					
 			elif target == self.passTarget:
 				pass
