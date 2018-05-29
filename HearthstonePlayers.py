@@ -33,10 +33,8 @@ class HumanPlayer():
 			if valid[i] == 1:
 				valid_indices.append(i)
 		
-		print("Valid Moves: ", valid_indices)
-		
 		while True:
-			a = int(input())
+			a = int(input(":: "))
 			
 			if valid[a]==1:
 				break

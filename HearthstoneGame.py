@@ -118,35 +118,40 @@ class HearthstoneGame():
 	
 	def getNextState(self, board, player, action):
 		b = np.copy(board)
-
-		game = self.injectBoard(b)
 		idx = pr(player)
 		jdx = pr(-player)
+		
+		if board[idx][self.playerTurnTrackerIndex] == 0:
+			return (b, -player)
+		
+		game = self.injectBoard(b)
 
-		if action <= self.maxMinions * self.enemyTargets:
-			attacker, target = self.extractMinionAction(action)
-			minion = game.players[idx].field[attacker]
-			
-			if target == self.faceTarget:
-				minion.attack(game.players[jdx].characters[0])
-			elif target == self.passTarget:
-				pass
-			else:
-				minion.attack(game.players[jdx].characters[target+1])
+		try:
+			if action <= self.maxMinions * self.enemyTargets:
+				attacker, target = self.extractMinionAction(action)
+				minion = game.players[idx].field[attacker]
+				
+				if target == self.faceTarget:
+					minion.attack(game.players[jdx].characters[0])
+				elif target == self.passTarget:
+					pass
+				else:
+					minion.attack(game.players[jdx].characters[target+1])
 
-		elif action > self.maxMinions * self.enemyTargets and action <= 10 * self.totalTargets:
-			cardIdx, target = self.extractCardAction(action)
+			elif action > self.maxMinions * self.enemyTargets and action <= 10 * self.totalTargets:
+				cardIdx, target = self.extractCardAction(action)
 
-			if target == self.passTarget:
-				card = game.players[idx].hand[cardIdx]
-				card.is_playable(debug=True)
-				card.play()
+				if target == self.passTarget:
+					card = game.players[idx].hand[cardIdx]
+					card.is_playable(debug=True)
+					card.play()
 
-		elif action == self.getActionSize() - 1:
-			try:
-				game.end_turn()
-			except GameOver:
-				pass
+			elif action == self.getActionSize() - 1:
+					game.end_turn()
+		except GameOver:
+			for deadIndex in [0,1]:
+				b[deadIndex][self.playerHealthIndex] = game.players[deadIndex].hero.health
+				return (b, -player)
 		
 		b = self.extractBoard(game)
 		return (b, -player)
@@ -306,12 +311,13 @@ def listValidMoves(board, player):
 def display(board):
 	h = HearthstoneGame()
 	
+	print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
 	print(' '.join(["[{}:{} {} ({})]".format(h.extractAction(l)[0], h.extractAction(l)[1], h.extractAction(l)[2], l) for l in listValidMoves(board, 1)]))
 	print()
 	
 	j = 0
 	print(int(board[j][h.playerHealthIndex]), int(board[j][h.playerManaIndex]), [direwolf.og_deck_names[h.handTrackerIndices.index(i)] for i in h.handTrackerIndices if board[j][i] == 1], "*" if board[j][h.playerTurnTrackerIndex] == 1 else "")
-	print([(int(board[j][i]),int(board[j][i+1]), "⁷" if board[j][i+2]==0 else "") for i in range(0, 28, 4) if board[j][i]>0])
+	print(["{}/{}{}".format(int(board[j][i]),int(board[j][i+1]), "⁷" if board[j][i+2]==0 else "") for i in range(0, 28, 4) if board[j][i]>0])
 	
 	print()
 	
@@ -322,18 +328,33 @@ def display(board):
 	print()
 	print(' '.join(["[{}:{} {} ({})]".format(h.extractAction(l)[0], h.extractAction(l)[1], h.extractAction(l)[2], l) for l in listValidMoves(board, -1)]))
 	
-	
-	print("\n\n")
+	print("\n")
 
 ## -- tests -- ##
 h=HearthstoneGame()
 
-def test_gameSim_ragerAttack():
+def test_getValidMoves_cantPlayOnEnemyTurn():
 	board = h.getInitBoard()
-	mId = 1
+	board[0][h.playerMaxManaIndex] = 10
 	
 	p = 1
 	board, p = h.getNextState(board, p, 239)
+	board, p = h.getNextState(board, p, 239)
+	board, p = h.getNextState(board, p, 239)
+	board, p = h.getNextState(board, p, h.getCardActionIndex(0, 8))
+	
+	v = h.getValidMoves(board, 1)
+	assert(v[-1] == 1)
+	assert(sum(v[:-1]) == 0)
+
+def test_gameSim_ragerAttack():
+	board = h.getInitBoard()
+	
+	p = 1
+	board, p = h.getNextState(board, p, 239)
+	board, p = h.getNextState(board, p, 239)
+	board, p = h.getNextState(board, p, 239)
+	board, p = h.getNextState(board, p, h.getCardActionIndex(0, 8))
 	board, p = h.getNextState(board, p, 239)
 	board, p = h.getNextState(board, p, 239)
 	board, p = h.getNextState(board, p, h.getCardActionIndex(0, 8))
