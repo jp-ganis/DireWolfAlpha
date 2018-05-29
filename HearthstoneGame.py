@@ -6,9 +6,9 @@ import py
 import hs.direwolf as direwolf
 import logging; logging.getLogger("fireplace").setLevel(logging.WARNING)
 from hearthstone.enums import Zone
+import pytest
+from fireplace.exceptions import GameOver
 	
-
-
 def pr(player):
 	return 0 if player == 1 else 1
 def test_pr():
@@ -17,6 +17,7 @@ def test_pr():
 
 class HearthstoneGame():
 	def __init__(self):
+		self.startingHealth = 10
 		self.maxMinions = 7
 		self.minionSize = 4
 		self.deckSize = 5
@@ -61,7 +62,7 @@ class HearthstoneGame():
 
 		for i in [0,1]:
 				row = board[i]
-				row[self.playerHealthIndex] = 30
+				row[self.playerHealthIndex] = 3
 				row[self.playerManaIndex] = 1
 				row[self.playerMaxManaIndex] = 1
 				row[self.playerCardsInHandIndex] = 3
@@ -129,8 +130,11 @@ class HearthstoneGame():
 				card.play()
 
 		elif action == self.getActionSize() - 1:
-			game.end_turn()
-
+			try:
+				game.end_turn()
+			except GameOver:
+				pass
+				
 		b = self.extractBoard(game)
 		return (b, -player)
 
@@ -265,10 +269,33 @@ class HearthstoneGame():
 		
 
 def display(board):
-		pass
+	pass
 
 ## -- tests -- ##
 h=HearthstoneGame()
+
+def test_getGameEnded_player2Win():
+	board = h.getInitBoard()
+	board[0][h.playerHealthIndex] = 0
+	
+	assert(h.getGameEnded(board, 1) == -1)
+	assert(h.getGameEnded(board, -1) == 1)
+	
+def test_getGameEnded_player1Win():
+	board = h.getInitBoard()
+	board[1][h.playerHealthIndex] = 0
+	
+	assert(h.getGameEnded(board, 1) == 1)
+	assert(h.getGameEnded(board, -1) == -1)
+	
+
+def test_getNextState_endOfGame():
+	board = h.getInitBoard()
+	board[0][h.playerHealthIndex] = 0
+	
+	with pytest.raises(GameOver):
+		h.getNextState(board, 1, h.getActionSize()-1)
+		
 
 def test_getNextState_playCard_player1():
 	board = h.getInitBoard()
@@ -319,7 +346,7 @@ def test_getNextState_minionGoesFace_player2():
 	player = -1
 
 	nextBoard, nextPlayer = h.getNextState(board, player, action)
-	assert(nextBoard[0][h.playerHealthIndex] == 28)
+	assert(nextBoard[0][h.playerHealthIndex] == h.startingHealth - 2)
 
 def test_getNextState_oneMinionAttacking_oneMinionDefending_player1():
 	board = h.getInitBoard()
@@ -492,7 +519,7 @@ def test_extractRow():
 	
 	for i in [0,1]:
 		row = h.extractRow(game.players[i])
-		assert(row[h.playerHealthIndex] == 30)
+		assert(row[h.playerHealthIndex] == h.startingHealth)
 		assert(row[h.playerManaIndex] == 1)
 		assert(row[h.playerMaxManaIndex] == 1)
 	
@@ -515,7 +542,7 @@ def test_injectBoard():
 	
 	for i in [0,1]:
 		player = game.players[i]
-		assert(player.hero.health == 30)
+		assert(player.hero.health == h.startingHealth)
 		assert(player.mana == 1)
 		assert(player.max_mana == 1)
 	assert(game.board[0].id == direwolf.og_deck[mId])
@@ -538,7 +565,7 @@ def test_getInitBoard():
 
 	for idx in [0,1]:
 		row = initBoard[idx]
-		assert(row[h.playerHealthIndex] == 30)
+		assert(row[h.playerHealthIndex] == h.startingHealth)
 		assert(row[h.playerManaIndex] == 1)
 		assert(row[h.playerCardsInHandIndex] == 3)
 
