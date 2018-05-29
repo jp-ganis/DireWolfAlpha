@@ -126,33 +126,35 @@ class HearthstoneGame():
 		
 		game = self.injectBoard(b)
 
-		try:
-			if action <= self.maxMinions * self.enemyTargets:
-				attacker, target = self.extractMinionAction(action)
-				minion = game.players[idx].field[attacker]
-				
-				if target == self.faceTarget:
+		if action <= self.maxMinions * self.enemyTargets:
+			attacker, target = self.extractMinionAction(action)
+			minion = game.players[idx].field[attacker]
+			
+			if target == self.faceTarget:
+				try:
 					minion.attack(game.players[jdx].characters[0])
-				elif target == self.passTarget:
-					pass
-				else:
-					minion.attack(game.players[jdx].characters[target+1])
+				except GameOver:
+					game.players[jdx].hero.hp = 0
+					
+			elif target == self.passTarget:
+				pass
+			else:
+				minion.attack(game.players[jdx].characters[target+1])
 
-			elif action > self.maxMinions * self.enemyTargets and action <= 10 * self.totalTargets:
-				cardIdx, target = self.extractCardAction(action)
+		elif action > self.maxMinions * self.enemyTargets and action <= 10 * self.totalTargets:
+			cardIdx, target = self.extractCardAction(action)
 
-				if target == self.passTarget:
-					card = game.players[idx].hand[cardIdx]
-					card.is_playable(debug=True)
-					card.play()
+			if target == self.passTarget:
+				card = game.players[idx].hand[cardIdx]
+				card.is_playable(debug=True)
+				card.play()
 
-			elif action == self.getActionSize() - 1:
-					game.end_turn()
-		except GameOver:
-			for deadIndex in [0,1]:
-				b[deadIndex][self.playerHealthIndex] = game.players[deadIndex].hero.health
-				return (b, -player)
-		
+		elif action == self.getActionSize() - 1:
+			try:
+				game.end_turn()
+			except GameOver:
+				pass
+					
 		b = self.extractBoard(game)
 		return (b, -player)
 
@@ -332,6 +334,23 @@ def display(board):
 
 ## -- tests -- ##
 h=HearthstoneGame()
+
+def test_injectBoard_fatigueDeath():
+	board = h.getInitBoard()
+	p=1
+	for i in range(100): board, p = h.getNextState(board, p, 239)
+
+def test_getNextState_canAttackForLethal():
+	board = h.getInitBoard()
+	board[1][h.playerHealthIndex] = 3
+	board[0][0] = 5
+	board[0][1] = 1
+	board[0][2] = 1
+	board[0][3] = 2
+	display(board)
+	
+	p=1
+	board, p = h.getNextState(board, p, 7)
 
 def test_getValidMoves_cantPlayOnEnemyTurn():
 	board = h.getInitBoard()

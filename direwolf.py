@@ -38,7 +38,7 @@ def setup_game():
 		mull_count = 0
 		cards_to_mulligan = []
 		player.choice.choose(*cards_to_mulligan)
-		
+	
 	game.end_turn()
 	game.end_turn()
 		
