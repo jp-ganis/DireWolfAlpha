@@ -18,7 +18,7 @@ def test_pr():
 
 class HearthstoneGame():
 	def __init__(self):
-		self.startingHealth = 3
+		self.startingHealth = 20
 		self.maxMinions = 7
 		self.minionSize = 4
 		self.deckSize = len(direwolf.og_deck)
@@ -190,7 +190,6 @@ class HearthstoneGame():
 		idx = pr(player)
 		jdx = pr(-player)
 		
-		if board[idx][self.playerMaxManaIndex] >= 5: return 1e-4
 		if board[idx][self.playerHealthIndex] <= 0: return -1
 		if board[jdx][self.playerHealthIndex] <= 0: return 1
 		return 0
@@ -212,8 +211,8 @@ class HearthstoneGame():
 		return board.tostring()
 		
 	def extractRow(self, player):
-		handTracker = [card for card in direwolf.og_deck]
-		deckTracker = [card for card in direwolf.og_deck]
+		handTracker = [0 for _ in range(len(direwolf.og_deck))]
+		deckTracker = [0 for _ in range(len(direwolf.og_deck))]
 
 		minions = []
 
@@ -222,9 +221,10 @@ class HearthstoneGame():
 		for _ in range(self.maxMinions - (len(player.characters)-1)):
 			minions += [0 for _ in range(self.minionSize)]
 		
-		for card in direwolf.og_deck:
-			handTracker[handTracker.index(card)] = int( card in [i.id for i in player.hand] )
-			deckTracker[deckTracker.index(card)] = int( card in [i.id for i in player.deck] )
+		for i in range(len(direwolf.og_deck)):
+			card = direwolf.og_deck[i]
+			handTracker[i] = int( card in [i.id for i in player.hand] )
+			deckTracker[i] = int( card in [i.id for i in player.deck] )
 		
 		row = [0 for _ in range(self.getBoardSize()[1])]
 		
@@ -329,24 +329,27 @@ def display(board):
 
 ## -- tests -- ##
 h=HearthstoneGame()
-
-def test_getNextState_manaGrowthAfterMinions():
+	
+def test_handleTargetedCard():
+	assert(1==2)
+	
+def test_handleChargeMinion():
+	assert(1==2)
+	
+def test_minionPassing_advancement():
 	board = h.getInitBoard()
 	
-	for i in [0,1]:
-		assert(board[i][h.playerMaxManaIndex] == 1)
+	board[0][h.playerMaxManaIndex] = 10
+	board[0][h.handTrackerIndices[0]] = 1
+	board[0][0] = 1
+	board[0][1] = 1
+	board[0][2] = 1
+	board[0][3] = 0
 	
-	p = 1
-	board, p = h.getNextState(board, p, 239) ##p1 passes
-	board, p = h.getNextState(board, p, 239) ##p2 passes
+	board,p = h.getNextState(board, 1, h.passTarget)
+	v = h.getValidMoves(board, p)
 	
-	board, p = h.getNextState(board, p, 239) ##p1 passes
-	board, p = h.getNextState(board, p, h.getCardActionIndex(0, 8)) ## p2 summons magma rager
-	board, p = h.getNextState(board, p, 239) ##p1 fake passes
-	board, p = h.getNextState(board, p, 239) ##p2 actually passes
-	
-	assert(board[0][h.playerTurnTrackerIndex] == 1)
-	assert(board[0][h.playerMaxManaIndex] == 3)
+	assert(v[h.passTarget] == 0)
 	
 def test_injectBoard_fatigueDeath():
 	board = h.getInitBoard()
@@ -364,55 +367,6 @@ def test_getNextState_canAttackForLethal():
 	
 	p=1
 	board, p = h.getNextState(board, p, 7)
-
-def test_getValidMoves_cantPlayOnEnemyTurn():
-	board = h.getInitBoard()
-	board[0][h.playerMaxManaIndex] = 10
-	
-	p = 1
-	board, p = h.getNextState(board, p, 239)
-	board, p = h.getNextState(board, p, 239)
-	board, p = h.getNextState(board, p, 239)
-	board, p = h.getNextState(board, p, h.getCardActionIndex(0, 8))
-	
-	v = h.getValidMoves(board, 1)
-	assert(v[-1] == 1)
-	assert(sum(v[:-1]) == 0)
-
-def test_gameSim_ragerAttack():
-	board = h.getInitBoard()
-	
-	p = 1
-	board, p = h.getNextState(board, p, 239)
-	board, p = h.getNextState(board, p, 239)
-	board, p = h.getNextState(board, p, 239)
-	board, p = h.getNextState(board, p, h.getCardActionIndex(0, 8))
-	board, p = h.getNextState(board, p, 239)
-	board, p = h.getNextState(board, p, 239)
-	board, p = h.getNextState(board, p, h.getCardActionIndex(0, 8))
-	board, p = h.getNextState(board, p, 239)
-	board, p = h.getNextState(board, p, 239)
-	
-	display(board)
-	
-	v = h.getValidMoves(board, -1)
-	assert(v[h.getMinionActionIndex(0, 7)] == 1)
-
-def test_gameSim_ragerPlayable():
-	board = h.getInitBoard()
-	mId = 1
-	
-	game = h.injectBoard(board)
-	
-	p = 1
-	board, p = h.getNextState(board, p, 239)
-	board, p = h.getNextState(board, p, 239)
-	board, p = h.getNextState(board, p, 239)
-	
-	display(board)
-	
-	v = h.getValidMoves(board, p)
-	assert(v[h.getCardActionIndex(0,8)] == 1)
 
 def test_getNextState_cardsPlayedThisTurn():
 	board = h.getInitBoard()
@@ -433,24 +387,6 @@ def test_injectExtractMatch():
 	
 	for i in range(len(board[0])):
 		assert(board[0][i] == nboard[0][i])
-	
-def test_getValidMoves_summonAllMinions():
-	board = h.getInitBoard()
-	
-	for j in [0,1]:
-		for i in h.handTrackerIndices:
-			board[j][i] = 1
-			board[j][h.playerManaIndex] = 10
-			
-	v0 = listValidMoves(board, 0)
-	v1 = listValidMoves(board, 1)
-	
-	cardActions = []
-	for i in range(len(h.handTrackerIndices)):
-		cardActions.append(h.getCardActionIndex(i, h.passTarget))
-	
-	assert(v0 == [h.getActionSize()-1])
-	assert(v1 == cardActions + [h.getActionSize()-1])
 	
 def test_injectBoard_allMinions():
 	board = h.getInitBoard()
