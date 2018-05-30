@@ -133,7 +133,6 @@ class HearthstoneGame():
 				
 				if target == self.faceTarget:
 					minion.attack(game.players[jdx].characters[0])
-					print(game.players[jdx].hero.health)
 				elif target == self.passTarget:
 					minion.num_attacks = minion.max_attacks + 1 ## exhaust minion on pass
 				else:
