@@ -125,36 +125,32 @@ class HearthstoneGame():
 			return (b, -player)
 		
 		game = self.injectBoard(b)
-
-		if action <= self.maxMinions * self.enemyTargets:
-			attacker, target = self.extractMinionAction(action)
-			minion = game.players[idx].field[attacker]
 			
-			if target == self.faceTarget:
-				try:
+		try:			
+			if action <= self.maxMinions * self.enemyTargets:
+				attacker, target = self.extractMinionAction(action)
+				minion = game.players[idx].field[attacker]
+				
+				if target == self.faceTarget:
 					minion.attack(game.players[jdx].characters[0])
-				except GameOver:
-					game.players[jdx].hero.damage = game.players[jdx].hero.max_health
-					
-			elif target == self.passTarget:
-				pass
-			else:
-				minion.attack(game.players[jdx].characters[target+1])
+					print(game.players[jdx].hero.health)
+				elif target == self.passTarget:
+					minion.num_attacks = minion.max_attacks + 1 ## exhaust minion on pass
+				else:
+					minion.attack(game.players[jdx].characters[target+1])
 
-		elif action > self.maxMinions * self.enemyTargets and action <= 10 * self.totalTargets:
-			cardIdx, target = self.extractCardAction(action)
+			elif action > self.maxMinions * self.enemyTargets and action <= 10 * self.totalTargets:
+				cardIdx, target = self.extractCardAction(action)
 
-			if target == self.passTarget:
-				card = game.players[idx].hand[cardIdx]
-				card.is_playable(debug=True)
-				card.play()
+				if target == self.passTarget:
+					card = game.players[idx].hand[cardIdx]
+					card.play()
 
-		elif action == self.getActionSize() - 1:
-			try:
+			elif action == self.getActionSize() - 1:
 				game.end_turn()
-			except GameOver:
-				pass
-					
+		except GameOver:
+			pass
+			
 		b = self.extractBoard(game)
 		return (b, -player)
 
@@ -335,6 +331,24 @@ def display(board):
 ## -- tests -- ##
 h=HearthstoneGame()
 
+def test_getNextState_manaGrowthAfterMinions():
+	board = h.getInitBoard()
+	
+	for i in [0,1]:
+		assert(board[i][h.playerMaxManaIndex] == 1)
+	
+	p = 1
+	board, p = h.getNextState(board, p, 239) ##p1 passes
+	board, p = h.getNextState(board, p, 239) ##p2 passes
+	
+	board, p = h.getNextState(board, p, 239) ##p1 passes
+	board, p = h.getNextState(board, p, h.getCardActionIndex(0, 8)) ## p2 summons magma rager
+	board, p = h.getNextState(board, p, 239) ##p1 fake passes
+	board, p = h.getNextState(board, p, 239) ##p2 actually passes
+	
+	assert(board[0][h.playerTurnTrackerIndex] == 1)
+	assert(board[0][h.playerMaxManaIndex] == 3)
+	
 def test_injectBoard_fatigueDeath():
 	board = h.getInitBoard()
 	p=1

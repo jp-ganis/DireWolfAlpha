@@ -39,73 +39,10 @@ def setup_game():
 		cards_to_mulligan = []
 		player.choice.choose(*cards_to_mulligan)
 	
-	game.end_turn()
-	game.end_turn()
+		game.begin_turn(player)
+		player.fatigue_counter = 0
 		
 	return game
-
-def getPlayerRow(player):
-	health = player.characters[0].health
-	mana = player.mana
-	turnTracker = player.current_player
-	maxMana = player.max_mana
-	handTracker = [card for card in og_deck]
-	deckTracker = [card for card in og_deck]
-
-	minions = []
-
-	for character in player.characters[1:]:
-		minions += [character.atk, character.health, int(character.can_attack())]
-	for _ in range(7 - (len(player.characters)-1)):
-		minions += [0,0,0]
-	
-	for card in og_deck:
-		handTracker[handTracker.index(card)] = int( card in [i.id for i in player.hand] )
-		deckTracker[deckTracker.index(card)] = int( card in [i.id for i in player.deck] )
-	
-	return minions + [health, mana, int(turnTracker), maxMana] + handTracker + deckTracker
-
-	
-def injectBoard(board):
-	game = setup_game()
-	
-	for idx in [0,1]:		
-		player = game.players[idx]
-		row = board[idx]
-		
-		mis = [i for i in range(28)]
-		hi = 29
-		mi = 30
-		tti = 31
-		mma = 32
-		hti = [i for i in range(32, 36, 1)]
-		dti = [i for i in range(36, 40, 1)]
-		
-		if tti == 1: 
-			game.current_player = player
-		
-		player.hand = []
-		player.deck = []
-		player.health = row[hi]
-		player.max_mana = int(row[mma])
-		player.used_mana = int(row[mma] - row[mi])
-		
-		for i in range(0,len(hti),3):
-			if mis[i] > 0:
-				card = player.card(og_deck[0])
-				player.field.append(card)
-				player.hand.append(card)
-				
-		for i in range(0,len(dti),3):
-			if mis[i] > 0:
-				card = player.card(og_deck[0])
-				player.field.append(card)
-				player.hand.append(card)
-				
-	return game
-	
-	
-	
 	
 
 if __name__ == '__main__':
