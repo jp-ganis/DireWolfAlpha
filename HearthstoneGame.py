@@ -47,6 +47,9 @@ class HearthstoneGame():
 		
 		self.enemyTargets = 9
 		self.totalTargets = 16
+
+		self.maxMinionTargetIndex = self.enemyTargets * self.maxMinions
+		self.maxCardTargetIndex = self.maxMinionTargetIndex + 10 * self.totalTargets
 		
 		self.passTarget = self.enemyTargets - 1
 		self.faceTarget = self.passTarget - 1
@@ -95,20 +98,20 @@ class HearthstoneGame():
 		return base, remainder
 
 	def getCardActionIndex(self, cardIdx, targetIdx):
-		return self.maxMinions * self.enemyTargets + cardIdx * self.totalTargets + targetIdx
+		return self.maxMinionTargetIndex + cardIdx * self.totalTargets + targetIdx
 
 	def extractCardAction(self, idx):
-		idx -= self.maxMinions * self.enemyTargets
+		idx -= self.maxMinionTargetIndex
 		base = int(idx / self.totalTargets)
 		remainder = idx % self.totalTargets
 		return base, remainder
 	
 	def extractAction(self, action):
-		if action <= self.maxMinions * self.enemyTargets:
+		if action <= self.maxMinionTargetIndex:
 			a,b = self.extractMinionAction(action)
 			return ("attack", a, b)
 
-		elif action > self.maxMinions * self.enemyTargets and action <= self.maxMinions * self.enemyTargets + 10 * self.totalTargets:
+		elif action <= self.maxCardTargetIndex:
 			a,b = self.extractCardAction(action)
 			return ("card", a, b) 
 		
@@ -142,9 +145,9 @@ class HearthstoneGame():
 
 			elif action > self.maxMinions * self.enemyTargets and action <= 10 * self.totalTargets:
 				cardIdx, target = self.extractCardAction(action)
+				card = game.players[idx].hand[cardIdx]
 
-				if target == self.passTarget:
-					card = game.players[idx].hand[cardIdx]
+				if not card.requires_target():
 					card.play()
 
 			elif action == self.getActionSize() - 1:
@@ -332,13 +335,15 @@ def display(board):
 ## -- tests -- ##
 h=HearthstoneGame()
 
+
 def test_extractFinalCardIndex():
 	action = h.getCardActionIndex(9, 15)
 	assert(h.extractAction(action) == ("card", 9, 15))
+	assert(h.extractAction(167) == ("card", 6, 8))
 
 def test_handleUntargetedSpell():
 	b = h.getInitBoard()
-	fsIdx = direwolf.og_deck_names.index("flamestrike")
+	fsIdx = direwolf.og_deck_names.index("Flamestrike")
 
 	b[0][h.handTrackerIndices[fsIdx]] = 1
 	b[1][0] = 1
@@ -349,13 +354,28 @@ def test_handleUntargetedSpell():
 
 	b,p = h.getNextState(b,1,h.getCardActionIndex(0,h.passTarget))
 
+	assert(b[0][0] == 0)
+	assert(b[0][1] == 0)
+
+def test_handleTargetedCardOnlyEnemyTarget():
+	pass
+
+def test_handleTargetedCardAnyTarget():
+	b = h.getInitBoard()
+	fsIdx = direwolf.og_deck_names.index("Frostbolt")
+
+	b[0][h.handTrackerIndices[fsIdx]] = 1
+	b[1][0] = 1
+	b[1][1] = 1
+	b[1][2] = 0
+	b[1][3] = 0
+	b[0][h.playerManaIndex] = 10
+
+	b,p = h.getNextState(b,1,h.getCardActionIndex(0,0))
 
 	assert(b[0][0] == 0)
 	assert(b[0][1] == 0)
 
-def test_handleTargetedCard():
-	pass
-	
 def test_handleChargeMinion():
 	pass
 	
