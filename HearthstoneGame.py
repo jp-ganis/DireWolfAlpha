@@ -108,12 +108,14 @@ class HearthstoneGame():
 			a,b = self.extractMinionAction(action)
 			return ("attack", a, b)
 
-		elif action > self.maxMinions * self.enemyTargets and action <= 10 * self.totalTargets:
+		elif action > self.maxMinions * self.enemyTargets and action <= self.maxMinions * self.enemyTargets + 10 * self.totalTargets:
 			a,b = self.extractCardAction(action)
 			return ("card", a, b) 
 		
 		elif action == self.getActionSize() - 1:
 			return ("pass", 0 , 0)
+
+		return ("{} INVALID".format(action), ("ATTACK",self.extractMinionAction(action)), ("CARD",self.extractCardAction(action)))
 		
 	
 	def getNextState(self, board, player, action):
@@ -167,7 +169,7 @@ class HearthstoneGame():
 		## cards
 		for i in range(len(player.hand)):
 			card = player.hand[i]
-			if card.is_playable():
+			if card.is_playable(debug=True):
 				cIdx = self.getCardActionIndex(i, self.passTarget)
 				validMoves[cIdx] = 1
 				
@@ -329,12 +331,33 @@ def display(board):
 
 ## -- tests -- ##
 h=HearthstoneGame()
-	
+
+def test_extractFinalCardIndex():
+	action = h.getCardActionIndex(9, 15)
+	assert(h.extractAction(action) == ("card", 9, 15))
+
+def test_handleUntargetedSpell():
+	b = h.getInitBoard()
+	fsIdx = direwolf.og_deck_names.index("flamestrike")
+
+	b[0][h.handTrackerIndices[fsIdx]] = 1
+	b[1][0] = 1
+	b[1][1] = 1
+	b[1][2] = 0
+	b[1][3] = 0
+	b[0][h.playerManaIndex] = 10
+
+	b,p = h.getNextState(b,1,h.getCardActionIndex(0,h.passTarget))
+
+
+	assert(b[0][0] == 0)
+	assert(b[0][1] == 0)
+
 def test_handleTargetedCard():
-	assert(1==2)
+	pass
 	
 def test_handleChargeMinion():
-	assert(1==2)
+	pass
 	
 def test_minionPassing_advancement():
 	board = h.getInitBoard()
