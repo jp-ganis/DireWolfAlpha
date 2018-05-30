@@ -16,12 +16,15 @@ magma_id = 'CS2_118'
 yeti_id = 'CS2_182'
 frostbolt_id='CS2_024'
 
-og_deck = [penguin_id, river_croc_id, magma_id, yeti_id, dire_wolf_alpha_id, 'EX1_015', 'EX1_085', 'CS2_122', 'CS2_222','EX1_593','CS2_119','GVG_044','DS1_055','CS2_200','CS2_124']
-og_deck_names = ["snowflipper penguin", "river crocolisk", "magma rager", "chillwind yeti", "dire wolf alpha", 'novice engineer', 'MCTech', "raid leader", "stormwind champion", "nightblade", "oasis snapjaw", "spider tank", "darkscale healer", "boulderfist ogre", "wolfrider"]
+og_deck = [penguin_id, river_croc_id, magma_id, yeti_id, dire_wolf_alpha_id, 'EX1_015']
+og_deck_names = ["Snowflipper Penguin", "River Crocolisk", "Magma Rager", "Chillwind Yeti", "Dire Wolf Alpha", 'Novice Engineer']
 
+og_deck += ['EX1_085', 'CS2_122', 'CS2_222','EX1_593','CS2_119','GVG_044','DS1_055','CS2_200','CS2_124']
+og_deck_names += ['Mind Control Tech', "Raid Leader", "Stormwind Champion", "Nightblade", "Oasis Snapjaw", "Spider Tank", "Darkscale Healer", "Boulderfist Ogre", "Wolfrider"]
 
-og_deck +=['CS2_032','CS2_024','CS2_092']
-og_deck_names += ["flamestrike", "frostbolt", "blessing of kings"]
+og_deck +=['CS2_032','CS2_024','CS2_092', 'CS2_108']
+og_deck_names += ["Flamestrike", "Frostbolt", "Blessing of Kings", "Execute"]
+
 
 def setup_game():
 	from fireplace.game import Game
@@ -50,19 +53,10 @@ if __name__ == '__main__':
 	from fireplace.player import Player
 	from fireplace.game import Game
 	
-	print(fireplace.cards.filter(name="Novice Engineer"))
-	print(fireplace.cards.filter(name="Mind Control Tech"))
+	for c in og_deck_names:
+		print(c, fireplace.cards.filter(name=c))
 
-	print(fireplace.cards.filter(name="Raid Leader"))
-	print(fireplace.cards.filter(name="Stormwind Champion"))
-	print(fireplace.cards.filter(name="Nightblade"))
-
-	print(fireplace.cards.filter(name="Oasis Snapjaw"))
-	print(fireplace.cards.filter(name="Spider Tank"))
-	print(fireplace.cards.filter(name="Darkscale Healer"))
-	print(fireplace.cards.filter(name="Boulderfist Ogre"))
+	print("\n\n")
 	
-	print(fireplace.cards.filter(name="Wolfrider"))
-	print(fireplace.cards.filter(name="Flamestrike"))
-	print(fireplace.cards.filter(name="Frostbolt"))
-	print(fireplace.cards.filter(name="Blessing of Kings"))
+	for c in og_deck_names:
+		print('1 x {}'.format(c))
