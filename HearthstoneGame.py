@@ -119,7 +119,6 @@ class HearthstoneGame():
 			return ("pass", 0 , 0)
 
 		return ("{} INVALID".format(action), ("ATTACK",self.extractMinionAction(action)), ("CARD",self.extractCardAction(action)))
-		
 	
 	def getNextState(self, board, player, action):
 		b = np.copy(board)
@@ -184,9 +183,38 @@ class HearthstoneGame():
 		for i in range(len(player.hand)):
 			card = player.hand[i]
 			if card.is_playable(debug=True):
-				cIdx = self.getCardActionIndex(i, self.passTarget)
-				validMoves[cIdx] = 1
-				
+				if not card.requires_target():
+					cIdx = self.getCardActionIndex(i, self.passTarget)
+					validMoves[cIdx] = 1
+				else:	
+					## 0 = own face, 1-7 = own minions
+					## 8-14 = enemy minions, 15 = enemy face
+					for target in card.play_targets:
+						tIdx = -1
+						if target == player.hero:
+							tIdx = 0
+							
+						elif target == enemyPlayer.hero:
+							tIdx = 15
+							
+						elif target in player.field:
+							tIdx = player.field.index(target)
+									
+						elif target in enemyPlayer.field:
+							tIdx = enemyPlayer.field.index(target) + 7
+						
+						if tIdx >= 0:
+							validMoves[self.getCardActionIndex(i, tIdx)] = 1
+						
+						
+					for target in range(self.totalTargets):		
+						if (target == 0 and player.hero in card.play_targets) \
+						or (target > 0 and target <= 7 and target < len(player.field) and player.field[target - 1] in card.play_targets) \
+						or (target > 7 and target <= 14 and target - 8 < len(enemyPlayer.field) and enemyPlayer.field[target - 8] in card.play_targets) \
+						or (target == 15 and enemyPlayer.hero in card.play_targets):
+							cIdx = self.getCardActionIndex(i, target)
+							validMoves[cIdx] = 1
+						
 		## attacks
 		for i in range(len(player.characters[1:])):
 			char = player.characters[1 + i]
@@ -304,7 +332,6 @@ class HearthstoneGame():
 					card.damage = card.max_health - row[mi + self.minionHealthIndex]
 					player.summon(card)
 
-
 			for i in hti:
 				if row[i] == 1:
 					card = player.card(direwolf.og_deck[self.handTrackerIndices.index(i)])
@@ -353,6 +380,26 @@ def display(board):
 
 ## -- tests -- ##
 h=HearthstoneGame()
+
+def test_frostboltingEveryone():
+	b = h.getInitBoard()
+	fsIdx = direwolf.og_deck_names.index("Frostbolt")
+
+	b[0][h.handTrackerIndices[fsIdx]] = 1
+	b[0][h.playerManaIndex] = 10
+	
+	for i in [j*h.minionSize for j in range(h.maxMinions)]:
+		for k in range(h.minionSize):
+			b[0][i+k] = 1
+			b[1][i+k] = 1
+			b[0][i+h.minionCanAttackIndex] = 0
+	
+	for target in range(h.totalTargets):
+		cIdx = h.getCardActionIndex(0, target)
+		v = h.getValidMoves(b, 1)
+		print(target)
+		assert(v[cIdx] == 1)
+	
 
 def test_extractFinalCardIndex():
 	action = h.getCardActionIndex(9, 15)
