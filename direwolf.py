@@ -33,8 +33,8 @@ def setup_game():
 
 	deck = og_deck
 
-	player1 = Player("Player1", deck, CardClass.WARRIOR.default_hero)
-	player2 = Player("Player2", deck, CardClass.WARRIOR.default_hero)
+	player1 = Player("Player1", deck, CardClass.MAGE.default_hero)
+	player2 = Player("Player2", deck, CardClass.HUNTER.default_hero)
 
 	game = Game(players=(player1,player2))
 	game.start()
