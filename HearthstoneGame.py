@@ -241,7 +241,7 @@ class HearthstoneGame():
 					validMoves[attackIdx] = 1
 
 		## hero power
-		if player.hero.power.is_usable(): ## NEED TO ADD HERO POWER TO OUR STATE REPRESENTATION OR THIS WILL ALWAYS BE USABLE
+		if player.hero.power.is_usable() and 1==2: ## NEED TO ADD HERO POWER TO OUR STATE REPRESENTATION OR THIS WILL ALWAYS BE USABLE
 			if not player.hero.power.requires_target():
 				validMoves[self.getHeroPowerActionIndex(self.passTarget)] = 1
 			else:
@@ -412,23 +412,83 @@ def display(board):
 	
 	print("\n")
 	
-def dfs_iterative(graph, start):
-    stack, path = [start], []
 
-    while stack:
-        vertex = stack.pop()
-        if vertex in path:
-            continue
-        path.append(vertex)
-        for neighbor in graph[vertex]:
-            stack.append(neighbor)
+def dfs(graph, start, end):
+    """
+    Compute dfs for a graph
+    :param graph: The given graph
+    :param start: Node to start bfs
+    :param end: Goal-node
+    """
+    frontier = [start, ]
+    explored = []
 
-    return path
-	
+    while True:
+        if len(frontier) == 0:
+            raise Exception("No way Exception")
+        current_node = frontier.pop()
+        explored.append(current_node)
+
+        # Check if node is goal-node
+        if current_node == end:
+            return
+
+        # expanding nodes
+        for node in reversed(graph[current_node]):
+            if node not in explored:
+                frontier.append(node)
+				
 def dfs_lethal_solver(board):
-	h, stack, path = HearthstoneGame(), [], []
-	pass
+	h = HearthstoneGame()
+	frontier = [board, ]
+	explored = []
+	parents = {}
+	goal_node = None
+	
+	while True:
+		if len(frontier) == 0:
+			return []
+		current_node = frontier.pop()
+		explored.append(str(current_node))
+
+		# Check if node is goal-node
+		if current_node[1][h.playerHealthIndex] <= 0:
+			goal_node = current_node
+			break
+
+		# get nodes we're connected to
+		connected_nodes = []
+		validMoves = h.getValidMoves(current_node, 1)[:-1]
+		validMoves = [i for i in range(len(validMoves)) if validMoves[i] == 1]
 		
+		# if len(validMoves) == 0:
+			# current_node = board
+			# validMoves = h.getValidMoves(current_node, 1)[:-1]
+			# validMoves = [i for i in range(len(validMoves)) if validMoves[i] == 1]
+			
+		# print(validMoves)
+		
+		for v in validMoves:
+			new_node = h.getNextState(current_node, 1, v)[0]
+			parents[str(new_node)] = (current_node, v)
+			connected_nodes.append(new_node)
+		
+		# expanding nodes
+		for node in connected_nodes:
+			if str(node) not in explored:
+				frontier.append(node)
+				
+	path = []
+	print(goal_node)
+	c_node = (goal_node, None)
+	
+	while str(c_node[0]) != str(board):
+		c_node = parents[str(c_node[0])]
+		path.append(c_node[1])
+	
+	return path[::-1]
+				
+	
 
 ## -- tests -- ##
 h=HearthstoneGame()
@@ -441,10 +501,10 @@ def test_dfsLethalSolver_frostboltFace():
 	b[0][h.playerManaIndex] = 10
 	b[1][h.playerHealthIndex] = 3
 	
-	# lethal = dfs_lethal_solver(b, max_depth=1)
-	# assert(len(lethal) > 0)
-
-def test_dfsLethalSolver_frostboltSteadyShot():
+	lethal = dfs_lethal_solver(b)
+	assert(len(lethal) > 0)
+	
+def test_dfsLethalSolver_frostboltAndAttack():
 	b = h.getInitBoard()
 	fsIdx = direwolf.og_deck_names.index("Frostbolt")
 
@@ -452,8 +512,18 @@ def test_dfsLethalSolver_frostboltSteadyShot():
 	b[0][h.playerManaIndex] = 10
 	b[1][h.playerHealthIndex] = 4
 	
-	# lethal = dfs_lethal_solver(b, max_depth=2)
-	# assert(len(lethal) == 2)
+	b[0][0] = 1
+	b[0][1] = 1
+	b[0][2] = 1
+	b[0][3] = 0
+	
+	b[1][0] = 1
+	b[1][1] = 1
+	b[1][2] = 1
+	b[1][3] = 0
+	
+	lethal = dfs_lethal_solver(b)
+	assert(len(lethal) > 0)
 	
 def test_getHeroPowerAction():
 	idx = h.getHeroPowerActionIndex(0)
