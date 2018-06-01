@@ -100,6 +100,9 @@ class HearthstoneGame():
 	def getCardActionIndex(self, cardIdx, targetIdx):
 		return self.maxMinionTargetIndex + cardIdx * self.totalTargets + targetIdx
 
+	def getHeroPowerActionIndex(self, targetIdx):
+		return self.maxCardTargetIndex + targetIdx
+
 	def extractCardAction(self, idx):
 		idx -= self.maxMinionTargetIndex
 		base = int(idx / self.totalTargets)
