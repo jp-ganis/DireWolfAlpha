@@ -106,6 +106,15 @@ class HearthstoneGame():
 		remainder = idx % self.totalTargets
 		return base, remainder
 	
+	def getHeroPowerActionIndex(self, targetIdx):
+		return self.maxCardTargetIndex + targetIdx
+		
+	def extractHeroPowerAction(self, idx):
+		idx -= self.maxMinionTargetIndex
+		idx -= self.totalTargets
+		remainder = idx % self.totalTargets
+		return 0, remainder
+	
 	def extractAction(self, action):
 		if action < self.maxMinionTargetIndex:
 			a,b = self.extractMinionAction(action)
@@ -114,12 +123,15 @@ class HearthstoneGame():
 		elif action < self.maxCardTargetIndex:
 			a,b = self.extractCardAction(action)
 			return ("card", a, b) 
-		
+
+		elif action < self.getActionSize() - 1:
+			a,b = self.extractHeroPowerAction(action)
+			return ("hero_power", a, b) 
+			
 		elif action == self.getActionSize() - 1:
 			return ("pass", 0 , 0)
-
+			
 		return ("{} INVALID".format(action), ("ATTACK",self.extractMinionAction(action)), ("CARD",self.extractCardAction(action)))
-		
 	
 	def getNextState(self, board, player, action):
 		b = np.copy(board)
@@ -159,8 +171,14 @@ class HearthstoneGame():
 				elif target <= 14:
 					card.play(target=game.players[jdx].field[target - 8])
 				elif target == 15:
-					card.play(target=game.player[jdx].hero)
-
+					card.play(target=game.players[jdx].hero)
+					
+			## hero power
+			elif action < self.getActionSize() - 1:
+				_, target = self.extractHeroPowerAction(action)
+				if target == self.passTarget:
+					game.players[idx].hero.power.use()
+					
 			elif action == self.getActionSize() - 1:
 				game.end_turn()
 		except GameOver:
@@ -184,9 +202,31 @@ class HearthstoneGame():
 		for i in range(len(player.hand)):
 			card = player.hand[i]
 			if card.is_playable(debug=True):
-				cIdx = self.getCardActionIndex(i, self.passTarget)
-				validMoves[cIdx] = 1
-				
+				if not card.requires_target():
+					cIdx = self.getCardActionIndex(i, self.passTarget)
+					validMoves[cIdx] = 1
+				else:	
+					## 0 = own face, 1-7 = own minions
+					## 8-14 = enemy minions, 15 = enemy face
+					for target in card.play_targets:
+						tIdx = -1
+
+						if target == player.hero:
+							tIdx = 0
+							
+						elif target == enemyPlayer.hero:
+							tIdx = 15
+							
+						elif target in player.field:
+							tIdx = player.field.index(target) + 1
+									
+						elif target in enemyPlayer.field:
+							tIdx = enemyPlayer.field.index(target) + 1 + 7
+						
+						if tIdx >= 0:
+							self.getCardActionIndex(i, tIdx)
+							validMoves[self.getCardActionIndex(i, tIdx)] = 1
+						
 		## attacks
 		for i in range(len(player.characters[1:])):
 			char = player.characters[1 + i]
@@ -199,7 +239,29 @@ class HearthstoneGame():
 				for j in range(len(enemyPlayer.characters[1:])):
 					attackIdx = self.getMinionActionIndex(i, j)
 					validMoves[attackIdx] = 1
-		
+
+		## hero power
+		if player.hero.power.is_usable(): ## NEED TO ADD HERO POWER TO OUR STATE REPRESENTATION OR THIS WILL ALWAYS BE USABLE
+			if not player.hero.power.requires_target():
+				validMoves[self.getHeroPowerActionIndex(self.passTarget)] = 1
+			else:
+				for target in player.hero.power.targets:
+					tIdx = -1
+					if target == player.hero:
+						tIdx = 0
+						
+					elif target == enemyPlayer.hero:
+						tIdx = 15
+						
+					elif target in player.field:
+						tIdx = player.field.index(target) + 1
+								
+					elif target in enemyPlayer.field:
+						tIdx = enemyPlayer.field.index(target) + 1 + 7
+					
+					if tIdx >= 0:
+						validMoves[self.getHeroPowerActionIndex(tIdx)] = 1
+
 		return validMoves
 
 	def getGameEnded(self, board, player):
@@ -304,7 +366,6 @@ class HearthstoneGame():
 					card.damage = card.max_health - row[mi + self.minionHealthIndex]
 					player.summon(card)
 
-
 			for i in hti:
 				if row[i] == 1:
 					card = player.card(direwolf.og_deck[self.handTrackerIndices.index(i)])
@@ -350,10 +411,75 @@ def display(board):
 	print(' '.join(["[{}:{} {} ({})]".format(h.extractAction(l)[0], h.extractAction(l)[1], h.extractAction(l)[2], l) for l in listValidMoves(board, -1)]))
 	
 	print("\n")
+	
+def dfs_iterative(graph, start):
+    stack, path = [start], []
+
+    while stack:
+        vertex = stack.pop()
+        if vertex in path:
+            continue
+        path.append(vertex)
+        for neighbor in graph[vertex]:
+            stack.append(neighbor)
+
+    return path
+	
+def dfs_lethal_solver(board):
+	h, stack, path = HearthstoneGame(), [], []
+	pass
+		
 
 ## -- tests -- ##
 h=HearthstoneGame()
 
+def test_dfsLethalSolver_frostboltFace():
+	b = h.getInitBoard()
+	fsIdx = direwolf.og_deck_names.index("Frostbolt")
+
+	b[0][h.handTrackerIndices[fsIdx]] = 1
+	b[0][h.playerManaIndex] = 10
+	b[1][h.playerHealthIndex] = 3
+	
+	# lethal = dfs_lethal_solver(b, max_depth=1)
+	# assert(len(lethal) > 0)
+
+def test_dfsLethalSolver_frostboltSteadyShot():
+	b = h.getInitBoard()
+	fsIdx = direwolf.og_deck_names.index("Frostbolt")
+
+	b[0][h.handTrackerIndices[fsIdx]] = 1
+	b[0][h.playerManaIndex] = 10
+	b[1][h.playerHealthIndex] = 4
+	
+	# lethal = dfs_lethal_solver(b, max_depth=2)
+	# assert(len(lethal) == 2)
+	
+def test_getHeroPowerAction():
+	idx = h.getHeroPowerActionIndex(0)
+	_, ex = h.extractHeroPowerAction(idx)
+	
+	assert(ex == 0)
+	assert(h.getHeroPowerActionIndex(h.passTarget)==231)
+	
+def test_frostboltingEveryone():
+	b = h.getInitBoard()
+	fsIdx = direwolf.og_deck_names.index("Frostbolt")
+
+	b[0][h.handTrackerIndices[fsIdx]] = 1
+	b[0][h.playerManaIndex] = 10
+	
+	for i in [j*h.minionSize for j in range(h.maxMinions)]:
+		for k in range(h.minionSize):
+			b[0][i+k] = 1
+			b[1][i+k] = 1
+			b[0][i+h.minionCanAttackIndex] = 0
+	
+	for target in range(h.totalTargets):
+		cIdx = h.getCardActionIndex(0, target)
+		v = h.getValidMoves(b, 1)
+		assert(v[cIdx] == 1)
+	
 def test_extractFinalCardIndex():
 	action = h.getCardActionIndex(9, 15)
 	assert(h.extractAction(action) == ("card", 9, 15))
@@ -439,9 +565,6 @@ def test_handleTargetedCardAnyTarget():
 	assert(b[0][0] == 0)
 	assert(b[0][1] == 0)
 
-def test_handleChargeMinion():
-	pass
-	
 def test_minionPassing_advancement():
 	board = h.getInitBoard()
 	
@@ -548,7 +671,6 @@ def test_getGameEnded_player1Win():
 	assert(h.getGameEnded(board, 1) == 1)
 	assert(h.getGameEnded(board, -1) == -1)
 	
-
 def test_getNextState_endOfGame():
 	board = h.getInitBoard()
 	board[0][h.playerHealthIndex] = 0
@@ -557,7 +679,6 @@ def test_getNextState_endOfGame():
 	
 	assert(h.getGameEnded(board, 1) == -1)
 		
-
 def test_getNextState_playCard_player1():
 	board = h.getInitBoard()
 
@@ -878,14 +999,44 @@ def test_extractCardAction():
 	assert(h.extractCardAction(idx)[0] == 9)
 	assert(h.extractCardAction(idx)[1] == 11)
 
-def test_heroPowerUntargeted():
-	pass
-
 def test_heroPowerTargeted():
-	pass
+	b = h.getInitBoard()
+	g = h.injectBoard(b)
+	p = g.players[0]
+	heropower = p.hero.power
+
+	b[0][h.playerManaIndex] = 10
+	
+	for i in [j*h.minionSize for j in range(h.maxMinions)]:
+		for k in range(h.minionSize):
+			b[0][i+k] = 1
+			b[1][i+k] = 1
+			b[0][i+h.minionCanAttackIndex] = 0
+	
+	v = h.getValidMoves(b, 1)
+	for target in range(h.totalTargets):
+		hIdx = h.getHeroPowerActionIndex(target)
+		assert(v[hIdx] == 1 or not heropower.requires_target())
+
+def test_heroPowerUntargeted():
+	b = h.getInitBoard()
+	g = h.injectBoard(b)
+	p = g.players[0]
+	heropower = p.hero.power
+
+	b[0][h.playerManaIndex] = 10
+	v = h.getValidMoves(b, 1)
+	assert(v[h.getHeroPowerActionIndex(h.passTarget)] == 1 or heropower.requires_target())
 
 def test_heroAttack():
 	pass
 
 def test_weaponSummon():
 	pass
+
+def test_handleChargeMinion():
+	pass
+
+def test_canOnlyHeroPowerOnce():
+	pass
+	

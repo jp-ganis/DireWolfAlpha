@@ -25,8 +25,11 @@ class HumanPlayer():
 		self.game = game
 
 	def play(self, board):
-		# display(board)
 		valid = self.game.getValidMoves(board, 1)
+		
+		if sum(valid) == 1:
+			return 239
+		
 		valid_indices = []
 		
 		for i in range(len(valid)):
