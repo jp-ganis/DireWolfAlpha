@@ -24,13 +24,14 @@ class HearthstoneGame():
 		self.deckSize = len(direwolf.og_deck)
 
 		self.minionSize = 4
-		
+
+		self.playerCanHeroPowerIndex = -5
 		self.playerTurnTrackerIndex = -4
 		self.playerHealthIndex = -3
 		self.playerManaIndex = -2
 		self.playerCardsInHandIndex = -1
 		
-		self.deckTrackerStartingIndex = -5
+		self.deckTrackerStartingIndex = -6
 		self.deckTrackerIndices = [i for i in range(self.deckTrackerStartingIndex, self.deckTrackerStartingIndex-self.deckSize, -1)]
 		
 		self.handTrackerStartingIndex = self.deckTrackerIndices[-1] - 1
@@ -179,9 +180,18 @@ class HearthstoneGame():
 			## hero power
 			elif action < self.getActionSize() - 1:
 				_, target = self.extractHeroPowerAction(action)
-				if target == self.passTarget:
+				heropower = game.players[idx].hero.power
+				if not heropower.requires_target():
 					game.players[idx].hero.power.use()
-					
+				elif target == 0:
+					heropower.use(target=game.players[idx].hero)
+				elif target <= 7:
+					heropower.use(target=game.players[idx].field[target - 1])
+				elif target <= 14:
+					heropower.use(target=game.players[jdx].field[target - 8])
+				elif target == 15:
+					heropower.use(target=game.players[jdx].hero)
+
 			elif action == self.getActionSize() - 1:
 				game.end_turn()
 		except GameOver:
@@ -244,9 +254,9 @@ class HearthstoneGame():
 					validMoves[attackIdx] = 1
 
 		## hero power
-		if player.hero.power.is_usable() and 1==2: ## NEED TO ADD HERO POWER TO OUR STATE REPRESENTATION OR THIS WILL ALWAYS BE USABLE
+		if player.hero.power.is_usable():
 			if not player.hero.power.requires_target():
-				validMoves[self.getHeroPowerActionIndex(self.passTarget)] = 1
+				validMoves[self.getHeroPowerActionIndex(0)] = 1
 			else:
 				for target in player.hero.power.targets:
 					tIdx = -1
@@ -317,6 +327,7 @@ class HearthstoneGame():
 		row[self.playerManaIndex] = player.mana
 		row[self.playerMaxManaIndex] = player.max_mana
 		row[self.playerTurnTrackerIndex] = int(player.current_player)
+		row[self.playerCanHeroPowerIndex] = int(player.hero.power.is_usable())
 		
 		for i in self.handTrackerIndices:
 			row[i] = handTracker[self.handTrackerIndices.index(i)]
@@ -358,6 +369,7 @@ class HearthstoneGame():
 			player.hero.damage = player.hero.max_health - row[hi]
 			player.max_mana = int(row[mma])
 			player.used_mana = int(row[mma] - row[mi])
+			player.hero.power.activations_this_turn = 0 if row[self.playerCanHeroPowerIndex] == 1 else 1
 			
 			for mi in mis:
 				if row[mi] > 0:
@@ -475,7 +487,6 @@ def dfs_lethal_solver(board):
 				frontier.append(node)
 				
 	path = []
-	print(goal_node)
 	c_node = (goal_node, None)
 	
 	while str(c_node[0]) != str(board):
@@ -483,43 +494,10 @@ def dfs_lethal_solver(board):
 		path.append(c_node[1])
 	
 	return path[::-1]
-				
-	
 
 ## -- tests -- ##
 h=HearthstoneGame()
 
-def test_dfsLethalSolver_frostboltFace():
-	b = h.getInitBoard()
-	fsIdx = direwolf.og_deck_names.index("Frostbolt")
-
-	b[0][h.handTrackerIndices[fsIdx]] = 1
-	b[0][h.playerManaIndex] = 10
-	b[1][h.playerHealthIndex] = 3
-	
-	lethal = dfs_lethal_solver(b)
-	assert(len(lethal) > 0)
-	
-def test_dfsLethalSolver_frostboltAndAttack():
-	b = h.getInitBoard()
-	fsIdx = direwolf.og_deck_names.index("Frostbolt")
-
-	b[0][h.handTrackerIndices[fsIdx]] = 1
-	b[0][h.playerManaIndex] = 10
-	b[1][h.playerHealthIndex] = 4
-	
-	b[0][0] = 1
-	b[0][1] = 1
-	b[0][2] = 1
-	b[0][3] = 0
-	
-	b[1][0] = 1
-	b[1][1] = 1
-	b[1][2] = 1
-	b[1][3] = 0
-	
-	lethal = dfs_lethal_solver(b)
-	assert(len(lethal) > 0)
 	
 def test_getHeroPowerAction():
 	idx = h.getHeroPowerActionIndex(0)
@@ -1072,6 +1050,7 @@ def test_heroPowerTargeted():
 	heropower = p.hero.power
 
 	b[0][h.playerManaIndex] = 10
+	b[0][h.playerCanHeroPowerIndex] = 1
 	
 	for i in [j*h.minionSize for j in range(h.maxMinions)]:
 		for k in range(h.minionSize):
@@ -1086,13 +1065,25 @@ def test_heroPowerTargeted():
 
 def test_heroPowerUntargeted():
 	b = h.getInitBoard()
-	g = h.injectBoard(b)
-	p = g.players[0]
-	heropower = p.hero.power
 
-	b[0][h.playerManaIndex] = 10
-	v = h.getValidMoves(b, 1)
-	assert(v[h.getHeroPowerActionIndex(h.passTarget)] == 1 or heropower.requires_target())
+	b[1][h.playerManaIndex] = 10
+	b[1][h.playerCanHeroPowerIndex] = 1
+	b[1][h.playerTurnTrackerIndex] = 1
+
+	v = h.getValidMoves(b, -1)
+	display(b)
+	assert(v[h.getHeroPowerActionIndex(0)] == 1)
+
+def test_canOnlyHeroPowerOnce():
+	b = h.getInitBoard()
+
+	b[1][h.playerManaIndex] = 10
+	b[1][h.playerCanHeroPowerIndex] = 1
+	b[1][h.playerTurnTrackerIndex] = 1
+
+	b, _ = h.getNextState(b, -1, h.getHeroPowerActionIndex(0))
+	v = h.getValidMoves(b, -1)
+	assert(v[h.getHeroPowerActionIndex(0)] == 0)
 
 def test_heroAttack():
 	pass
@@ -1103,6 +1094,63 @@ def test_weaponSummon():
 def test_handleChargeMinion():
 	pass
 
-def test_canOnlyHeroPowerOnce():
-	pass
+def test_dfsLethalSolver_frostboltFace():
+	b = h.getInitBoard()
+	fsIdx = direwolf.og_deck_names.index("Frostbolt")
+
+	b[0][h.handTrackerIndices[fsIdx]] = 1
+	b[0][h.playerManaIndex] = 10
+	b[1][h.playerHealthIndex] = 3
 	
+	lethal = dfs_lethal_solver(b)
+	assert(len(lethal) > 0)
+	
+def test_dfsLethalSolver_frostboltAndAttack():
+	b = h.getInitBoard()
+	fsIdx = direwolf.og_deck_names.index("Frostbolt")
+
+	b[0][h.handTrackerIndices[fsIdx]] = 1
+	b[0][h.playerManaIndex] = 10
+	b[1][h.playerHealthIndex] = 4
+	
+	b[0][0] = 1
+	b[0][1] = 1
+	b[0][2] = 1
+	b[0][3] = 0
+	
+	b[1][0] = 1
+	b[1][1] = 1
+	b[1][2] = 1
+	b[1][3] = 0
+	
+	lethal = dfs_lethal_solver(b)
+	assert(len(lethal) > 0)
+
+def test_dfsLethalSolver_bittertideEasy():
+	b = h.getInitBoard()
+	bthIdx = direwolf.og_deck_names.index("Bittertide Hydra")
+	wpIdx = direwolf.og_deck_names.index("Wild Pyromancer")
+	csIdx = direwolf.og_deck_names.index("Commanding Shout")
+	wwIdx = direwolf.og_deck_names.index("Whirlwind")
+
+	b[0][h.handTrackerIndices[wpIdx]] = 1
+	b[0][h.handTrackerIndices[wwIdx]] = 1
+	b[0][h.handTrackerIndices[csIdx]] = 1
+
+	b[0][16] = 1
+	b[0][17] = 1
+	b[0][18] = 1
+	b[0][19] = 0
+
+	b[1][0] = 8
+	b[1][1] = 8
+	b[1][2] = 0
+	b[1][3] = bthIdx
+
+	b[0][h.playerManaIndex] = 6
+	b[1][h.playerHealthIndex] = 9
+
+	display(b)
+
+	lethal = dfs_lethal_solver(b)
+	assert(len(lethal) > 0)
