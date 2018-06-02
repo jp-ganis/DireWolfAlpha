@@ -464,13 +464,6 @@ def dfs_lethal_solver(board):
 		validMoves = h.getValidMoves(current_node, 1)[:-1]
 		validMoves = [i for i in range(len(validMoves)) if validMoves[i] == 1]
 		
-		# if len(validMoves) == 0:
-			# current_node = board
-			# validMoves = h.getValidMoves(current_node, 1)[:-1]
-			# validMoves = [i for i in range(len(validMoves)) if validMoves[i] == 1]
-			
-		# print(validMoves)
-		
 		for v in validMoves:
 			new_node = h.getNextState(current_node, 1, v)[0]
 			parents[str(new_node)] = (current_node, v)
