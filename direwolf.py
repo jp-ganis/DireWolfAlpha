@@ -24,10 +24,10 @@ og_deck_names = ["Snowflipper Penguin", "River Crocolisk", "Magma Rager", "Chill
 og_deck += ['EX1_085', 'CS2_122', 'CS2_222','EX1_593','CS2_119','GVG_044','DS1_055','CS2_200']#,'CS2_124']
 og_deck_names += ['Mind Control Tech', "Raid Leader", "Stormwind Champion", "Nightblade", "Oasis Snapjaw", "Spider Tank", "Darkscale Healer", "Boulderfist Ogre"]#, "Wolfrider"]
 
-og_deck +=['CS2_032','CS2_024','CS2_092', 'CS2_108', 'UNG_087']
+og_deck +=['CS2_032','CS2_024','CS2_092', 'CS2_108']#, 'UNG_087']
 og_deck_names += ["Flamestrike", "Frostbolt", "Blessing of Kings", "Execute", "Bittertide Hydra"]
 
-og_deck +=['NEW1_020', 'OG_314', 'NEW1_036', 'EX1_400']
+# og_deck +=['NEW1_020', 'OG_314', 'NEW1_036', 'EX1_400']
 og_deck_names += ["Wild Pyromancer", "Blood To Ichor", "Commanding Shout", "Whirlwind"]
 
 
@@ -37,7 +37,7 @@ def setup_game():
 	fireplace.cards.filter(name="Garrosh")
 
 	player1 = Player("Player1", og_deck, CardClass.HUNTER.default_hero)
-	player2 = Player("Player2", og_deck, CardClass.MAGE.default_hero)
+	player2 = Player("Player2", og_deck, CardClass.WARRIOR.default_hero)
 	
 	game = Game(players=(player1,player2))
 	game.start()

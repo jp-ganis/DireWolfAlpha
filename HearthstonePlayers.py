@@ -1,14 +1,14 @@
 import numpy as np
 from .HearthstoneGame import display
 
-class PassPlayer():
+class PassBot():
 	def __init__(self, game):
 		self.game = game
 
 	def play(self, board):
 		return self.game.getActionSize() - 1
 
-class RandomPlayer():
+class RandBot():
 	def __init__(self, game):
 		self.game = game
 
@@ -20,7 +20,7 @@ class RandomPlayer():
 		return a
 
 
-class HumanPlayer():
+class HumBot():
 	def __init__(self, game):
 		self.game = game
 
@@ -46,20 +46,39 @@ class HumanPlayer():
 		return a
 
 		
-class FacePlayer():
+class FaceBot():
 	def __init__(self, game):
 		self.game = game
 
 	def play(self, board):
-		# display(board)
 		valid = self.game.getValidMoves(board, 1)
-		valid_indices = []
+		valid_indices = [i for i in range(len(valid)) if valid[i] == 1]
 		
-		if valid[63] == 1:
-			return 63
+		return valid_indices[0]
 		
-		for i in [j*3 for j in range(7)]:
-			if valid[i] == 1:
-				return i
 		
-		return 66
+class ValueBot():
+	def __init__(self, game):
+		self.game = game
+
+	def play(self, board):
+		valid = self.game.getValidMoves(board, 1)
+		valid[63] = 0
+		valid_indices = [i for i in range(len(valid)) if valid[i] == 1]
+		
+		## get current my minions/enemy minions/enemy
+		my_mc = sum([board[0][i*4 + 1] for i in range(7)])
+		en_mc = sum([board[1][i*4 + 1] for i in range(7)])
+		
+		for a in valid_indices:
+			nb, _ = self.game.getNextState(board, 1, a)
+			
+			## check if after move i have same minions, enemy has less
+			new_mmc = sum([board[0][i*4 + 1] for i in range(7)])
+			new_emc = sum([board[1][i*4 + 1] for i in range(7)])
+			
+			## if so, do that move, otherwise check for any minion actions that go face
+			if new_mmc == my_mc and new_emc < en_mc:
+				return a
+		
+		return valid_indices[0]

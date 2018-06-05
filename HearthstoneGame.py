@@ -426,32 +426,6 @@ def display(board):
 	print(' '.join(["[{}:{} {} ({})]".format(h.extractAction(l)[0], h.extractAction(l)[1], h.extractAction(l)[2], l) for l in listValidMoves(board, -1)]))
 	
 	print("\n")
-	
-
-def dfs(graph, start, end):
-    """
-    Compute dfs for a graph
-    :param graph: The given graph
-    :param start: Node to start bfs
-    :param end: Goal-node
-    """
-    frontier = [start, ]
-    explored = []
-
-    while True:
-        if len(frontier) == 0:
-            raise Exception("No way Exception")
-        current_node = frontier.pop()
-        explored.append(current_node)
-
-        # Check if node is goal-node
-        if current_node == end:
-            return
-
-        # expanding nodes
-        for node in reversed(graph[current_node]):
-            if node not in explored:
-                frontier.append(node)
 				
 def dfs_lethal_solver(board):
 	h = HearthstoneGame()
