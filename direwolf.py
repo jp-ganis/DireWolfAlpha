@@ -36,8 +36,8 @@ def setup_game():
 	from fireplace.player import Player
 	fireplace.cards.filter(name="Garrosh")
 
-	player1 = Player("Player1", og_deck, CardClass.HUNTER.default_hero)
-	player2 = Player("Player2", og_deck, CardClass.WARRIOR.default_hero)
+	player1 = Player("Player1", og_deck, CardClass.PRIEST.default_hero)
+	player2 = Player("Player2", og_deck, CardClass.WARLOCK.default_hero)
 	
 	game = Game(players=(player1,player2))
 	game.start()

@@ -1,5 +1,8 @@
 import numpy as np
 from .HearthstoneGame import display
+from DMCTS import MCTS
+from utils import *
+
 
 class PassBot():
 	def __init__(self, game):
@@ -82,3 +85,13 @@ class ValueBot():
 				return a
 		
 		return valid_indices[0]
+		
+class MatchBot20():
+	def __init__(self, game, iterations):
+		self.game = game
+		self.args = dotdict({'numMCTSSims': iterations, 'cpuct':1.0})
+		self.mcts = MCTS(game, self.args)
+		
+	def play(self, board):
+		return np.argmax(self.mcts.getActionProb(board, temp=0)) if sum(self.game.getValidMoves(board, 1)) > 1 else 239
+	

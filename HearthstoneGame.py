@@ -18,7 +18,7 @@ def test_pr():
 
 class HearthstoneGame():
 	def __init__(self):
-		self.startingHealth = 20
+		self.startingHealth = 3
 		self.maxMinions = 7
 		self.minionSize = 4
 		self.deckSize = len(direwolf.og_deck)
@@ -379,7 +379,10 @@ class HearthstoneGame():
 
 					card.atk = row[mi + self.minionAttackIndex]
 					card.damage = card.max_health - row[mi + self.minionHealthIndex]
-					player.summon(card)
+					try:
+						player.summon(card)
+					except GameOver:
+						return game
 
 			for i in hti:
 				if row[i] == 1:
@@ -1128,3 +1131,27 @@ def test_dfsLethalSolver_bittertideEasy():
 
 	lethal = dfs_lethal_solver(b)
 	assert(len(lethal) > 0)
+
+	
+def test_turnTime():
+	import time
+	b = h.getInitBoard()
+	s = time.time()
+	p = 1
+	
+	display(b)
+	o=0
+	
+	for i in range(100):
+		try:
+			v = h.getValidMoves(b, p)
+			v = [i for i in range(len(v)) if v[i] == 1]
+			if v[0] == 239: o+=1
+			b, p = h.getNextState(b, p, v[0])
+			b = h.syncBoard(b)
+		except GameOver:
+			b = h.getInitBoard()
+			p = 1
+	t = (time.time()-s)/(100-o)
+	assert(t <= 0.04)
+	# assert(1==2)
