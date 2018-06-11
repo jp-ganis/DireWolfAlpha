@@ -68,9 +68,9 @@ class HearthstoneGame():
 				row[self.playerHealthIndex] = self.startingHealth
 				row[self.playerManaIndex] = 0
 				row[self.playerMaxManaIndex] = 0
-				row[self.playerCardsInHandIndex] = sum([row[i] for i in self.handTrackerIndices])
 				for j in self.handTrackerIndices[:3]: row[j] = 1
 				for j in self.deckTrackerIndices[3:]: row[j] = 1
+				row[self.playerCardsInHandIndex] = sum([row[i] for i in self.handTrackerIndices])
 		board[0][self.playerTurnTrackerIndex] = 1
 
 		return board
@@ -654,6 +654,9 @@ def test_injectExtractMatch():
 	board = h.getInitBoard()
 	game = h.injectBoard(board)
 	nboard = h.extractBoard(game)
+
+	print(board)
+	print(nboard)
 	
 	for i in range(len(board[0])):
 		assert(board[0][i] == nboard[0][i])
@@ -681,22 +684,22 @@ def test_injectBoard_cardsInHand_afterOneTurn():
 	game.end_turn()
 	game.end_turn()
 	
-	assert(len(player.hand) == 1)
-	assert(len(jplayer.hand) == 1)
+	assert(len(player.hand) == 4)
+	assert(len(jplayer.hand) == 4)
 	
 def test_injectBoard_cardsInHand_onInit():
 	board = h.getInitBoard()
 	game = h.injectBoard(board)
 	player = game.players[0]
 	
-	assert(len(game.players[0].hand) == 0)
+	assert(len(game.players[0].hand) == 3)
 
 def test_initBoard_correctDeck():
 	board = h.getInitBoard()
 	game = h.injectBoard(board)
 	player = game.players[0]
 	
-	assert(len(player.deck) == len(direwolf.og_deck))
+	assert(len(player.deck) == len(direwolf.og_deck)-board[0][h.playerCardsInHandIndex])
 	
 def test_getGameEnded_player2Win():
 	board = h.getInitBoard()
@@ -720,19 +723,6 @@ def test_getNextState_endOfGame():
 	
 	assert(h.getGameEnded(board, 1) == -1)
 		
-def test_getNextState_playCard_player1():
-	board = h.getInitBoard()
-
-	board[0][h.handTrackerIndices[0]] = 1
-
-	game = h.injectBoard(board)
-	action = h.getCardActionIndex(0, h.passTarget)
-	player = 1
-
-	nextBoard, nextPlayer = h.getNextState(board, player, action)
-	assert(nextPlayer == -1)
-	assert(nextBoard[0][0] == 1)
-
 def test_getNextState_blankPass_player1():
 	board = h.getInitBoard()
 	action = h.getActionSize() - 1
@@ -820,17 +810,6 @@ def test_getNextState_oneMinionAttacking_oneMinionDefending_player2():
 	assert(p == 1)
 	assert(b[0][1] == 1)
 	assert(b[1][1] == 1)
-
-def test_getValidMoves_playCard_player1():
-	board = h.getInitBoard()
-
-	board[0][h.handTrackerIndices[0]] = 1
-
-	game = h.injectBoard(board)
-	
-	v = h.getValidMoves(board, 1)
-	action = h.getCardActionIndex(0, h.passTarget)
-	assert(v[action] == 1)
 	
 def test_getValidMoves_onlyPass():
 	board = h.getInitBoard()
@@ -954,8 +933,8 @@ def test_extractRow():
 	for i in [0,1]:
 		row = h.extractRow(game.players[i])
 		assert(row[h.playerHealthIndex] == h.startingHealth)
-		assert(row[h.playerManaIndex] == 1)
-		assert(row[h.playerMaxManaIndex] == 1)
+		assert(row[h.playerManaIndex] == 0)
+		assert(row[h.playerMaxManaIndex] == 0)
 	
 	row = h.extractRow(game.players[0])
 	assert(row[0] == 2)
@@ -977,8 +956,8 @@ def test_injectBoard():
 	for i in [0,1]:
 		player = game.players[i]
 		assert(player.hero.health == h.startingHealth)
-		assert(player.mana == 1)
-		assert(player.max_mana == 1)
+		assert(player.mana == 0)
+		assert(player.max_mana == 0)
 	assert(game.board[0].id == direwolf.og_deck[mId])
 	assert(game.current_player == game.players[0])
 	assert(len(game.board) == 1)
@@ -1000,8 +979,8 @@ def test_getInitBoard():
 	for idx in [0,1]:
 		row = initBoard[idx]
 		assert(row[h.playerHealthIndex] == h.startingHealth)
-		assert(row[h.playerManaIndex] == 1)
-		assert(row[h.playerCardsInHandIndex] == 0)
+		assert(row[h.playerManaIndex] == 0)
+		assert(row[h.playerCardsInHandIndex] == 3)
 
 		for i in h.deckTrackerIndices:
 			assert(row[i] == 1)
