@@ -1,7 +1,7 @@
 import sys; sys.path.insert(0, '../fireplace'); sys.path.insert(0, './fireplace')
 from fireplace.exceptions import GameOver
 from hearthstone.enums import Zone
-import direwolf as direwolf
+import hs.direwolf as direwolf
 import fireplace.cards
 import numpy as np
 import pytest
@@ -220,7 +220,7 @@ class HearthstoneGame():
 		## cards
 		for i in range(len(player.hand)):
 			card = player.hand[i]
-			if card.is_playable(debug=True):
+			if card.is_playable():
 				if not card.requires_target():
 					cIdx = self.getCardActionIndex(i, self.passTarget)
 					validMoves[cIdx] = 1
@@ -359,22 +359,19 @@ class HearthstoneGame():
 			player = game.players[idx]
 			row = board[idx]
 			
-			mis = [i*self.minionSize for i in range(7)]
-			hi = self.playerHealthIndex
-			mi = self.playerManaIndex
-			tti = self.playerTurnTrackerIndex
+			mis = [i*self.minionSize for i in range(self.maxMinions)]
 			mma = self.playerMaxManaIndex
 			hti = [i for i in self.handTrackerIndices]
 			dti = [i for i in self.deckTrackerIndices]
 			
-			if row[tti] == 1: 
+			if row[self.playerTurnTrackerIndex] == 1: 
 				game.current_player = player
 			
 			player.hand = []
 			player.deck = []
-			player.hero.damage = player.hero.max_health - row[hi]
+			player.hero.damage = player.hero.max_health - row[self.playerHealthIndex]
 			player.max_mana = int(row[mma])
-			player.used_mana = int(row[mma] - row[mi])
+			player.used_mana = int(row[mma] - row[self.playerManaIndex])
 			player.hero.power.activations_this_turn = 0 if row[self.playerCanHeroPowerIndex] == 1 else 1
 			
 			for mi in mis:
@@ -513,6 +510,7 @@ def dfs_lethal_solver(board, player=1):
 
 ## -- tests -- ##
 h=HearthstoneGame()
+penguinId = direwolf.og_deck_names.index("Snowflipper Penguin")
 
 	
 def test_getHeroPowerAction():
@@ -526,6 +524,8 @@ def test_frostboltingEveryone():
 	b = h.getInitBoard()
 	fsIdx = direwolf.og_deck_names.index("Frostbolt")
 
+	for j in h.handTrackerIndices:
+		b[0][j] = 0
 	b[0][h.handTrackerIndices[fsIdx]] = 1
 	b[0][h.playerManaIndex] = 10
 	
@@ -534,10 +534,13 @@ def test_frostboltingEveryone():
 			b[0][i+k] = 1
 			b[1][i+k] = 1
 			b[0][i+h.minionCanAttackIndex] = 0
+			b[0][i+h.minionIdIndex] = penguinId 
+	
 	
 	for target in range(h.totalTargets):
 		cIdx = h.getCardActionIndex(0, target)
 		v = h.getValidMoves(b, 1)
+		display(b)
 		assert(v[cIdx] == 1)
 	
 def test_extractFinalCardIndex():
@@ -549,13 +552,15 @@ def test_handleUntargetedSpell():
 	b = h.getInitBoard()
 	fsIdx = direwolf.og_deck_names.index("Flamestrike")
 
+	for j in h.handTrackerIndices: b[0][j] = 0
 	b[0][h.handTrackerIndices[fsIdx]] = 1
 	b[1][0] = 1
 	b[1][1] = 1
 	b[1][2] = 0
-	b[1][3] = 0
+	b[1][3] = penguinId
 	b[0][h.playerManaIndex] = 10
 
+	display(b)
 	b,p = h.getNextState(b,1,h.getCardActionIndex(0,h.passTarget))
 
 	assert(b[1][0] == 0)
@@ -569,6 +574,7 @@ def test_handleTargetedCardOnlyMinionTarget():
 	exIdx = direwolf.og_deck_names.index("Blessing of Kings")
 	cwIdx = direwolf.og_deck_names.index("Chillwind Yeti")
 
+	for j in h.handTrackerIndices: b[0][j] = 0
 	b[0][h.handTrackerIndices[exIdx]] = 1
 	b[1][0] = 4
 	b[1][1] = 5
@@ -586,12 +592,13 @@ def test_handleExecute():
 	exIdx = direwolf.og_deck_names.index("Execute")
 	cwIdx = direwolf.og_deck_names.index("Chillwind Yeti")
 
+	for j in h.handTrackerIndices: b[0][j] = 0
 	b[0][h.handTrackerIndices[exIdx]] = 1
 
 	b[0][0] = 1
 	b[0][1] = 1
 	b[0][2] = 1
-	b[0][3] = 0
+	b[0][3] = penguinId
 	b[1][0] = 4
 	b[1][1] = 5
 	b[1][2] = 0
@@ -613,32 +620,18 @@ def test_handleTargetedCardAnyTarget():
 	b = h.getInitBoard()
 	fsIdx = direwolf.og_deck_names.index("Frostbolt")
 
+	for j in h.handTrackerIndices: b[0][j] = 0
 	b[0][h.handTrackerIndices[fsIdx]] = 1
 	b[1][0] = 1
 	b[1][1] = 1
 	b[1][2] = 0
-	b[1][3] = 0
+	b[1][3] = penguinId
 	b[0][h.playerManaIndex] = 10
 
 	b,p = h.getNextState(b, 1, h.getCardActionIndex(0,0))
 
 	assert(b[0][0] == 0)
 	assert(b[0][1] == 0)
-
-def test_minionPassing_advancement():
-	board = h.getInitBoard()
-	
-	board[0][h.playerMaxManaIndex] = 10
-	board[0][h.handTrackerIndices[0]] = 1
-	board[0][0] = 1
-	board[0][1] = 1
-	board[0][2] = 1
-	board[0][3] = 0
-	
-	board,p = h.getNextState(board, 1, h.passTarget)
-	v = h.getValidMoves(board, p)
-	
-	assert(v[h.passTarget] == 0)
 	
 def test_injectBoard_fatigueDeath():
 	board = h.getInitBoard()
@@ -656,18 +649,6 @@ def test_getNextState_canAttackForLethal():
 	
 	p=1
 	board, p = h.getNextState(board, p, 7)
-
-def test_getNextState_cardsPlayedThisTurn():
-	board = h.getInitBoard()
-
-	board[0][h.handTrackerIndices[0]] = 1
-
-	game = h.injectBoard(board)
-	action = h.getCardActionIndex(0, h.passTarget)
-	player = 1
-	nextBoard, nextPlayer = h.getNextState(board, player, action)
-	
-	assert(game.players[0].cards_played_this_turn == 0)
 
 def test_injectExtractMatch():
 	board = h.getInitBoard()
