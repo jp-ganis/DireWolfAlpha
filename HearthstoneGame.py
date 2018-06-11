@@ -1,7 +1,7 @@
 import sys; sys.path.insert(0, '../fireplace'); sys.path.insert(0, './fireplace')
 from fireplace.exceptions import GameOver
 from hearthstone.enums import Zone
-import hs.direwolf as direwolf
+import direwolf as direwolf
 import fireplace.cards
 import numpy as np
 import pytest
@@ -18,7 +18,7 @@ def test_pr():
 
 class HearthstoneGame():
 	def __init__(self):
-		self.startingHealth = 3
+		self.startingHealth = 20
 		self.maxMinions = 7
 		self.minionSize = 4
 		self.deckSize = len(direwolf.og_deck)
@@ -66,10 +66,11 @@ class HearthstoneGame():
 		for i in [0,1]:
 				row = board[i]
 				row[self.playerHealthIndex] = self.startingHealth
-				row[self.playerManaIndex] = 1
-				row[self.playerMaxManaIndex] = 1
-				row[self.playerCardsInHandIndex] = 0
-				for j in self.deckTrackerIndices: row[j] = 1
+				row[self.playerManaIndex] = 0
+				row[self.playerMaxManaIndex] = 0
+				row[self.playerCardsInHandIndex] = sum([row[i] for i in self.handTrackerIndices])
+				for j in self.handTrackerIndices[:3]: row[j] = 1
+				for j in self.deckTrackerIndices[3:]: row[j] = 1
 		board[0][self.playerTurnTrackerIndex] = 1
 
 		return board
@@ -150,7 +151,12 @@ class HearthstoneGame():
 		try:			
 			if action < self.maxMinionTargetIndex:
 				attacker, target = self.extractMinionAction(action)
-				minion = game.players[idx].field[attacker]
+				try:
+					minion = game.players[idx].field[attacker]
+				except:
+					print(action, attacker, target)
+					display(board)
+					assert(1==2)
 				
 				if target == self.faceTarget:
 					minion.attack(game.players[jdx].characters[0])
@@ -247,7 +253,7 @@ class HearthstoneGame():
 				faceIdx = self.getMinionActionIndex(i, self.faceTarget)
 				passIdx = self.getMinionActionIndex(i, self.passTarget)
 				validMoves[faceIdx] = 1
-				validMoves[passIdx] = 1
+				validMoves[passIdx] = 0
 				
 				for j in range(len(enemyPlayer.characters[1:])):
 					attackIdx = self.getMinionActionIndex(i, j)
@@ -429,13 +435,46 @@ def display(board):
 	print(' '.join(["[{}:{} {} ({})]".format(h.extractAction(l)[0], h.extractAction(l)[1], h.extractAction(l)[2], l) for l in listValidMoves(board, -1)]))
 	
 	print("\n")
+	
+def tostring(board):
+	h = HearthstoneGame()
+	board = np.copy(board)
+	
+	s= "~"*30 if board[0][h.playerTurnTrackerIndex] == 1 else "-"*30
+	s+= "Top To Play (1)" if board[0][h.playerTurnTrackerIndex] == 1 else "Bottom To Play (-1)"
+	s+="\n"
+	
+	s+=(' '.join(["[{}:{} {} ({})]".format(h.extractAction(l)[0], h.extractAction(l)[1], h.extractAction(l)[2], l) for l in listValidMoves(board, 1)]))
+	s+=("\n\n")
+	
+	j = 0
+	s+=str(int(board[j][h.playerHealthIndex])) + " " + str(int(board[j][h.playerManaIndex])) + " " + ' '.join(["[{}]".format(direwolf.og_deck_names[h.handTrackerIndices.index(i)]) for i in h.handTrackerIndices if board[j][i] == 1])
+	s+="\n"
+	s+=str(["{}/{}{}".format(int(board[j][i]),int(board[j][i+1]), "⁷" if board[j][i+2]==0 else "") for i in range(0, 28, 4) if board[j][i]>0])
+	s+="\n"
+	
+	s+=("\n")
+	
+	j = 1
+	s+=str(["{}/{}{}".format(int(board[j][i]),int(board[j][i+1]), "⁷" if board[j][i+2]==0 else "") for i in range(0, 28, 4) if board[j][i]>0])
+	s+="\n"
+	s+=str(int(board[j][h.playerHealthIndex])) + " " + str(int(board[j][h.playerManaIndex])) + " " + ' '.join(["[{}]".format(direwolf.og_deck_names[h.handTrackerIndices.index(i)]) for i in h.handTrackerIndices if board[j][i] == 1])	
+	
+	s+=("\n\n")
+	s+=(' '.join(["[{}:{} {} ({})]".format(h.extractAction(l)[0], h.extractAction(l)[1], h.extractAction(l)[2], l) for l in listValidMoves(board, -1)]))
+	
+	s+=("\n")
+	
+	return s
 				
-def dfs_lethal_solver(board):
+def dfs_lethal_solver(board, player=1):
 	h = HearthstoneGame()
 	frontier = [board, ]
 	explored = []
 	parents = {}
 	goal_node = None
+	
+	jdx = 1 if player == 1 else 0
 	
 	while True:
 		if len(frontier) == 0:
@@ -444,17 +483,17 @@ def dfs_lethal_solver(board):
 		explored.append(str(current_node))
 
 		# Check if node is goal-node
-		if current_node[1][h.playerHealthIndex] <= 0:
+		if current_node[jdx][h.playerHealthIndex] <= 0:
 			goal_node = current_node
 			break
 
 		# get nodes we're connected to
 		connected_nodes = []
-		validMoves = h.getValidMoves(current_node, 1)[:-1]
+		validMoves = h.getValidMoves(current_node, player)[:-1]
 		validMoves = [i for i in range(len(validMoves)) if validMoves[i] == 1]
 		
 		for v in validMoves:
-			new_node = h.getNextState(current_node, 1, v)[0]
+			new_node, _ = h.getNextState(current_node, player, v)
 			parents[str(new_node)] = (current_node, v)
 			connected_nodes.append(new_node)
 		
@@ -850,7 +889,7 @@ def test_getValidMoves_oneMinionAttacking():
 	assert(v[h.getMinionActionIndex(0, 0)] == 0)
 	assert(v[h.getMinionActionIndex(0, 2)] == 0)
 	assert(v[h.getMinionActionIndex(0, h.faceTarget)] == 1)
-	assert(v[h.getMinionActionIndex(0, h.passTarget)] == 1)
+	assert(v[h.getMinionActionIndex(0, h.passTarget)] == 0)
 
 def test_getValidMoves_oneMinionAttacking_oneMinionDefending_player1():
 	board = h.getInitBoard()
@@ -876,7 +915,7 @@ def test_getValidMoves_oneMinionAttacking_oneMinionDefending_player1():
 	assert(v[h.getMinionActionIndex(0, 0)] == 1)
 	assert(v[h.getMinionActionIndex(0, 2)] == 0)
 	assert(v[h.getMinionActionIndex(0, h.faceTarget)] == 1)
-	assert(v[h.getMinionActionIndex(0, h.passTarget)] == 1)
+	assert(v[h.getMinionActionIndex(0, h.passTarget)] == 0)
 	
 def test_getValidMoves_oneMinionAttacking_oneMinionDefending_player2():
 	board = h.getInitBoard()
@@ -901,7 +940,7 @@ def test_getValidMoves_oneMinionAttacking_oneMinionDefending_player2():
 	assert(v[h.getMinionActionIndex(0, 0)] == 1)
 	assert(v[h.getMinionActionIndex(0, 2)] == 0)
 	assert(v[h.getMinionActionIndex(0, h.faceTarget)] == 1)
-	assert(v[h.getMinionActionIndex(0, h.passTarget)] == 1)
+	assert(v[h.getMinionActionIndex(0, h.passTarget)] == 0)
 
 	
 def test_injectAndExtract():
@@ -1107,12 +1146,10 @@ def test_dfsLethalSolver_bittertideEasy():
 	b = h.getInitBoard()
 	bthIdx = direwolf.og_deck_names.index("Bittertide Hydra")
 	wpIdx = direwolf.og_deck_names.index("Wild Pyromancer")
-	csIdx = direwolf.og_deck_names.index("Commanding Shout")
 	wwIdx = direwolf.og_deck_names.index("Whirlwind")
 
 	b[0][h.handTrackerIndices[wpIdx]] = 1
 	b[0][h.handTrackerIndices[wwIdx]] = 1
-	b[0][h.handTrackerIndices[csIdx]] = 1
 
 	b[0][16] = 1
 	b[0][17] = 1
@@ -1125,8 +1162,10 @@ def test_dfsLethalSolver_bittertideEasy():
 	b[1][3] = bthIdx
 
 	b[0][h.playerManaIndex] = 6
-	b[1][h.playerHealthIndex] = 9
+	b[1][h.playerHealthIndex] = 6
 
+	
+	b,_ = h.getNextState(b, 1, 0)
 	display(b)
 
 	lethal = dfs_lethal_solver(b)
@@ -1141,17 +1180,16 @@ def test_turnTime():
 	
 	display(b)
 	o=0
+	r = 100
 	
-	for i in range(100):
-		try:
-			v = h.getValidMoves(b, p)
-			v = [i for i in range(len(v)) if v[i] == 1]
-			if v[0] == 239: o+=1
-			b, p = h.getNextState(b, p, v[0])
-			b = h.syncBoard(b)
-		except GameOver:
+	for i in range(r):
+		v = h.getValidMoves(b, p)
+		v = [i for i in range(len(v)) if v[i] == 1]
+		if v[0] == 239: o+=1
+		b, p = h.getNextState(b, p, v[0])
+		b = h.syncBoard(b)
+		if h.getGameEnded(b,p) != 0:
 			b = h.getInitBoard()
 			p = 1
-	t = (time.time()-s)/(100-o)
-	assert(t <= 0.04)
-	# assert(1==2)
+	t = (time.time()-s)/(r-o)
+	assert(t <= 0.1)

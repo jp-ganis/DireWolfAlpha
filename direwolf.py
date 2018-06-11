@@ -11,32 +11,41 @@ import os
 import copy
 import logging; logging.getLogger("fireplace").setLevel(logging.WARNING)
 
-dire_wolf_alpha_id = 'EX1_162'
-penguin_id = 'ICC_023'
-river_croc_id = 'CS2_120'
-magma_id = 'CS2_118'
-yeti_id = 'CS2_182'
-frostbolt_id='CS2_024'
+og_deck = []
+og_deck_names =[]
 
-og_deck = [penguin_id, river_croc_id, magma_id, yeti_id, dire_wolf_alpha_id, 'EX1_015']
-og_deck_names = ["Snowflipper Penguin", "River Crocolisk", "Magma Rager", "Chillwind Yeti", "Dire Wolf Alpha", 'Novice Engineer']
+og_deck_names += ["Spider Tank"]
+og_deck_names += ["Magma Rager"]
+og_deck_names += ["Chillwind Yeti"]
+og_deck_names += ["Oasis Snapjaw"]
+og_deck_names += ["Wild Pyromancer"]
+og_deck_names += ["Frostbolt"]
+og_deck_names += ["Flamestrike"]
+# og_deck_names += ["Brawl"] ## rng effect!
+og_deck_names += ["Nightblade"]
+og_deck_names += ["Boulderfist Ogre"]
+og_deck_names += ["Fireball"]
+og_deck_names += ["Bittertide Hydra"]
+og_deck_names += ["Doomsayer"]
+og_deck_names += ["Execute"]
+og_deck_names += ["Darkscale Healer"]
+og_deck_names += ["Whirlwind"]
+og_deck_names += ["Mind Control Tech"]
+og_deck_names += ["Defile"]
+og_deck_names += ["Blessing of Kings"]
+og_deck_names += ["River Crocolisk"]
+og_deck_names += ["Snowflipper Penguin"]
 
-og_deck += ['EX1_085', 'CS2_122', 'CS2_222','EX1_593','CS2_119','GVG_044','DS1_055','CS2_200']#,'CS2_124']
-og_deck_names += ['Mind Control Tech', "Raid Leader", "Stormwind Champion", "Nightblade", "Oasis Snapjaw", "Spider Tank", "Darkscale Healer", "Boulderfist Ogre"]#, "Wolfrider"]
+# random.shuffle(og_deck_names)
 
-og_deck +=['CS2_032','CS2_024','CS2_092', 'CS2_108']#, 'UNG_087']
-og_deck_names += ["Flamestrike", "Frostbolt", "Blessing of Kings", "Execute", "Bittertide Hydra"]
-
-# og_deck +=['NEW1_020', 'OG_314', 'NEW1_036', 'EX1_400']
-og_deck_names += ["Wild Pyromancer", "Blood To Ichor", "Commanding Shout", "Whirlwind"]
-
+og_deck = [fireplace.cards.filter(name=n)[0] for n in og_deck_names]
 
 def setup_game():
 	from fireplace.game import Game
 	from fireplace.player import Player
 	fireplace.cards.filter(name="Garrosh")
 
-	player1 = Player("Player1", og_deck, CardClass.PRIEST.default_hero)
+	player1 = Player("Player1", og_deck, CardClass.MAGE.default_hero)
 	player2 = Player("Player2", og_deck, CardClass.WARLOCK.default_hero)
 	
 	game = Game(players=(player1,player2))

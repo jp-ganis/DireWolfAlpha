@@ -22,7 +22,6 @@ class HearthState:
 		self.playerJustMoved = 1 
 		self.h = HearthstoneGame()
 		self.board = self.h.getInitBoard()
-		self.vDict = {}
 			
 	def Clone(self):
 		""" Create a deep clone of this game state.
@@ -169,14 +168,30 @@ class Node:
 
 	def __repr__(self):
 		return "[M:" + str(self.move) + " W/V:" + str(self.wins) + "/" + str(self.visits) + " U:" + str(self.untriedMoves) + "]"
+		
+	def __add__(self, other):
+		mergedNode = Node(state=HearthState())
+		mergedNode.playerJustMoved = self.playerJustMoved
+		
+		mergedNode.wins = self.wins + other.wins
+		mergedNode.visits = self.visits + other.visits
+		
+		for child_a in self.childNodes:
+			for child_b in other.childNodes:
+				if child_a.move == child_b.move:
+					mergedNode.childNodes.append(child_a + child_b)
+					
+		return mergedNode
+		
+		
 
 """ 
 Conduct a UCT search for itermax iterations starting from rootstate.
 Return the best move from the rootstate.
 Assumes 2 alternating players (player 1 starts), with game results in the range [0.0, 1.0].
 """
-def UCT(rootstate, itermax, verbose = False, parallel = False):
-	rootnode = Node(state = rootstate)
+def UCT(rootstate, itermax, verbose=False, parallel=False, bestNode=False, prebuiltNode=None):
+	rootnode = Node(state = rootstate) if prebuiltNode is None else prebuiltNode
 
 	for i in range(itermax):
 		if verbose: print("[{}/{}]".format(i+1,itermax), end="\r")
@@ -197,9 +212,9 @@ def UCT(rootstate, itermax, verbose = False, parallel = False):
 		# Rollout - this can often be made orders of magnitude quicker using a state.GetRandomMove() function
 		while state.GetMoves() != []:
 			r = random.random()
-			if r < 0.2:
+			if r < 0.5:
 				state.DoMove(state.GetRandomMove())
-			elif r < 0.5:
+			elif r < 0.6:
 				state.DoMove(state.GetBestFaceMove())
 			else:
 				state.DoMove(state.GetBestBoardControlMove())
@@ -213,11 +228,13 @@ def UCT(rootstate, itermax, verbose = False, parallel = False):
 	if verbose and not parallel: print(rootnode.TreeToString(0))
 	elif not parallel: print(rootnode.ChildrenToString())
 
+	if bestNode:
+		return sorted(rootnode.childNodes, key = lambda c: c.visits)[-1]
+	
 	if parallel:
 		return rootnode
 	
-	return sorted(rootnode.childNodes, key = lambda c: c.visits)[-1] # return the node that was most visited
-				
+	return sorted(rootnode.childNodes, key = lambda c: c.visits)[-1].move # return the move that was most visited
 				
 """
 Parallelism, Pervasive AF
@@ -291,9 +308,10 @@ def UCTPlayGame(player_1, player_2, verbose=True):
 if __name__ == '__main__':
 	## need to set up keeping the tree between runs
 	direwolf.setup_game()
-	print("\nAnd there, but for the grace of god, I go. Chance willeth as it will.\n")
+	print("\nAnd there, but for the grace of god, I go.\n")
 	
 	h = HearthstoneGame()
+	s = HearthState()
 	
 	passBot = lambda b: 239
 	randBot = lambda b: random.choice(b.GetMoves())
@@ -313,8 +331,8 @@ if __name__ == '__main__':
 	wins = {1:0, -1:0}
 	matches = int(sys.argv[1])
 	
-	player_1 = uct10
-	player_2 = humBot
+	player_1 = lelBot_3200
+	player_2 = valueBot
 	
 	total_time = 0.0
 	time_per_game = 0.0
