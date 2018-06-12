@@ -11,6 +11,34 @@ import os
 import copy
 import logging; logging.getLogger("fireplace").setLevel(logging.WARNING)
 
+def get_murloc_paladin_deck():
+	n = []
+	
+	# n += 2*["Gentle Megasaur"] ## probably also can't do adapt (Sea Giant + Black Knight)
+	# n += 2*["Hydrologist"] ## discover is busted (Bluegill Warrior)
+	# n += 2*["Unidentified Maul"] ## NYI (Truesilver Champion)
+	
+	n += 2*["Murloc Tidecaller"]
+	n += 2*["Rockpool Hunter"] ## NYI
+	n += 2*["Call to Arms"]
+	n += 2*["Bluegill Warrior"]
+	n += 2*["Righteous Protector"]
+	n += 2*["Lost in the Jungle"] ## NYI
+	n += 1*["Coldlight Seer"]
+	n += 2*["Murloc Warleader"]
+	n += 2*["Nightmare Amalgam"]
+	n += 2*["Truesilver Champion"]
+	n += 2*["Knife Juggler"]
+	n += 1*["The Black Knight"]
+	n += 1*["Sea Giant"]
+	n += 1*["Sunkeeper Tarim"] ## NYI
+	n += 1*["Vinecleaver"] ## NYI
+	n += 1*["Fungalmancer"] ## NYI
+	n += 2*["Divine Favor"]
+	n += 1*["Spellbreaker"]
+	n += 1*["Blessing of Kings"]
+	
+	return [(c, fireplace.cards.filter(name=c)[0]) for c in n if len(fireplace.cards.filter(name=c)) > 0]
 	
 def get_odd_warrior_deck():
 	n = []
@@ -22,11 +50,12 @@ def get_odd_warrior_deck():
 	n += 2*["Rabid Worgen"]
 	n += 2*["Reckless Flurry"]
 	n += 2*["Shield Block"]
-	n += 1*["Fiery War Axe"] ## replace this
+	n += 1*["Fiery War Axe"]
 	n += 1*["Big Game Hunter"]
 	n += 2*["Brawl"]
 	n += 1*["Darius Crowley"]
-	n += 2*["Direhorn Hatchling"]
+	n += 1*["Direhorn Hatchling"]
+	n += 1*["Rotten Applebaum"]
 	n += 1*["Faceless Manipulator"]
 	n += 1*["Harrison Jones"]
 	n += 1*["Baron Geddon"]
@@ -34,7 +63,7 @@ def get_odd_warrior_deck():
 	n += 1*["Baku the Mooneater"]
 	n += 1*["King Mosh"]
 	
-	return list(set([(c, fireplace.cards.filter(name=c)[0]) for c in n if len(fireplace.cards.filter(name=c)) > 0]))
+	return [(c, fireplace.cards.filter(name=c)[0]) for c in n if len(fireplace.cards.filter(name=c)) > 0]
 
 og_deck = []
 og_deck_names =[]
@@ -64,8 +93,12 @@ og_deck_names += ["Snowflipper Penguin"]
 # random.shuffle(og_deck_names)
 
 og_deck = [fireplace.cards.filter(name=n)[0] for n in og_deck_names]
-# og_deck = [c[1] for c in get_odd_warrior_deck()]
-# og_deck_names = [c[0] for c in get_odd_warrior_deck()]
+
+warrior_deck  		= [c[1] for c in get_odd_warrior_deck()]
+warrior_deck_names 	= [c[0] for c in get_odd_warrior_deck()]
+
+paladin_deck 		= [c[1] for c in get_murloc_paladin_deck()]
+paladin_deck_names  = [c[0] for c in get_murloc_paladin_deck()]
 
 def enumerate_actions(game):
 	actions = set() ## set of (function, arg) tuples
@@ -99,8 +132,8 @@ def setup_game():
 	from fireplace.player import Player
 	fireplace.cards.filter(name="Garrosh")
 
-	player1 = Player("Player1", og_deck, CardClass.WARRIOR.default_hero)
-	player2 = Player("Player2", og_deck, CardClass.WARLOCK.default_hero)
+	player1 = Player("OddWarrior", og_deck, CardClass.WARRIOR.default_hero)
+	player2 = Player("MurlocPaladin", og_deck, CardClass.PALADIN.default_hero)
 	
 	game = Game(players=(player1,player2))
 	game.start()
@@ -113,9 +146,6 @@ def setup_game():
 		game.begin_turn(player)
 		
 	return game
-	
-def get_murloc_paladin_deck():
-	pass
 
 if __name__ == '__main__':
 	from fireplace.player import Player
@@ -128,27 +158,13 @@ if __name__ == '__main__':
 		print('1 x {}'.format(c))
 		card = Card(c[1])
 		
+	print("\n\n")
+	
+	for c in sorted(get_murloc_paladin_deck()):
+		print('1 x {}'.format(c))
+		card = Card(c[1])
+		
 	print("\n\n")	
 
 	
-
-	game = setup_game()
-	for i in range(7):
-		game.end_turn()
-	
-	game.player1.give('GIL_547').play()
-	game.end_turn()
-	
-	for card in game.player2.hand:
-		if card.is_playable() and not card.requires_target():
-			card.play()
-	
-	game.end_turn()
-	
-	print(game.board)
-	game.player1.field[0].attack(game.player2.field[0])
-	
-	print(game.board[0], game.board[0].atk, game.board[0].health)
-	
-	print(game.board)
 	

@@ -21,7 +21,16 @@ class HearthstoneGame():
 		self.startingHealth = 20
 		self.maxMinions = 7
 		self.minionSize = 4
-		self.deckSize = len(direwolf.og_deck)
+		self.deckSize = len(direwolf.warrior_deck)
+		
+		self.player1_deck = direwolf.warrior_deck
+		self.player1_deck_names = direwolf.warrior_deck_names
+		
+		self.player2_deck = direwolf.paladin_deck
+		self.player2_deck_names = direwolf.paladin_deck_names
+			
+		self.decklists = [None, self.player1_deck, self.player2_deck]
+		self.decknames = [None, self.player1_deck_names, self.player2_deck_names]
 
 		self.minionSize = 4
 
@@ -62,14 +71,18 @@ class HearthstoneGame():
 						that will be the input to your neural network)
 		"""
 		board = np.zeros(self.getBoardSize())
-
+		
 		for i in [0,1]:
 				row = board[i]
+				decklist = self.decklists[i+1]
+				
 				row[self.playerHealthIndex] = self.startingHealth
 				row[self.playerManaIndex] = 0
 				row[self.playerMaxManaIndex] = 0
+				
 				for j in self.handTrackerIndices[:3]: row[j] = 1
 				for j in self.deckTrackerIndices[3:]: row[j] = 1
+						
 				row[self.playerCardsInHandIndex] = sum([row[i] for i in self.handTrackerIndices])
 		board[0][self.playerTurnTrackerIndex] = 1
 
@@ -308,21 +321,31 @@ class HearthstoneGame():
 		return board.tostring()
 		
 	def extractRow(self, player):
-		handTracker = [0 for _ in range(len(direwolf.og_deck))]
-		deckTracker = [0 for _ in range(len(direwolf.og_deck))]
+		_player_deck = self.decklists[1] if player.first_player else self.decklists[-1]
+	
+		handTracker = [0 for _ in range(len(_player_deck))]
+		deckTracker = [0 for _ in range(len(_player_deck))]
 
 		minions = []
 
 		for character in player.characters[1:]:
-			minions += [character.atk, character.health, int(character.can_attack()), direwolf.og_deck.index(character.id)]
+			minions += [character.atk, character.health, int(character.can_attack()), _player_deck.index(character.id)]
 		for _ in range(self.maxMinions - (len(player.characters)-1)):
 			minions += [0 for _ in range(self.minionSize)]
 		
-		for i in range(len(direwolf.og_deck)):
-			card = direwolf.og_deck[i]
-			handTracker[i] = int( card in [i.id for i in player.hand] )
-			deckTracker[i] = int( card in [i.id for i in player.deck] )
-		
+		for i in range(self.deckSize):
+			card = _player_deck[i]
+			next_card = _player_deck[i+1] if i+1 < self.deckSize else None
+			
+			if card == next_card:	
+				handTracker[i] = int( card in [i.id for i in player.hand] )
+				deckTracker[i] = int( [i.id for i in player.deck].count(card) == 2 )		
+			else:
+				handTracker[i] = int( [i.id for i in player.hand].count(card) == 2 )
+				deckTracker[i] = int( card in [i.id for i in player.deck] )
+				
+			last_card = card
+			
 		row = [0 for _ in range(self.getBoardSize()[1])]
 		
 		for i in range(self.minionSize * self.maxMinions):
@@ -355,9 +378,10 @@ class HearthstoneGame():
 	def injectBoard(self, board):
 		game = direwolf.setup_game()
 		
-		for idx in [0,1]:		
+		for idx in [0,1]:
 			player = game.players[idx]
-			row = board[idx]
+			row = board[idx]		
+			_player_deck = self.decklists[idx+1]
 			
 			mis = [i*self.minionSize for i in range(self.maxMinions)]
 			mma = self.playerMaxManaIndex
@@ -377,11 +401,13 @@ class HearthstoneGame():
 			for mi in mis:
 				if row[mi] > 0:
 					cardIdx = int(row[mi + self.minionIdIndex])
-					card = player.card(direwolf.og_deck[cardIdx])
+					card = player.card(_player_deck[cardIdx])
 					card.turns_in_play = 1 if row[mi + self.minionCanAttackIndex] > 0 else 0
 
 					card.atk = row[mi + self.minionAttackIndex]
 					card.damage = card.max_health - row[mi + self.minionHealthIndex]
+					# card.zone = Zone.PLAY
+					## jptodo - we shouldn't summon a minion every turn. summoning should happen somewhere that isn't where we inject the board.
 					try:
 						player.summon(card)
 					except GameOver:
@@ -389,12 +415,12 @@ class HearthstoneGame():
 
 			for i in hti:
 				if row[i] == 1:
-					card = player.card(direwolf.og_deck[self.handTrackerIndices.index(i)])
+					card = player.card(_player_deck[self.handTrackerIndices.index(i)])
 					card.zone = Zone.HAND
 			
 			for i in dti:
 				if row[i] == 1:
-					card = player.card(direwolf.og_deck[self.deckTrackerIndices.index(i)])
+					card = player.card(_player_deck[self.deckTrackerIndices.index(i)])
 					card.zone = Zone.DECK
 					
 		return game
@@ -412,26 +438,7 @@ def listValidMoves(board, player):
 	return l
 		
 def display(board):
-	h = HearthstoneGame()
-	
-	print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-	print(' '.join(["[{}:{} {} ({})]".format(h.extractAction(l)[0], h.extractAction(l)[1], h.extractAction(l)[2], l) for l in listValidMoves(board, 1)]))
-	print()
-	
-	j = 0
-	print(int(board[j][h.playerHealthIndex]), int(board[j][h.playerManaIndex]), [direwolf.og_deck_names[h.handTrackerIndices.index(i)] for i in h.handTrackerIndices if board[j][i] == 1], "*" if board[j][h.playerTurnTrackerIndex] == 1 else "")
-	print(["{}/{}{}".format(int(board[j][i]),int(board[j][i+1]), "⁷" if board[j][i+2]==0 else "") for i in range(0, 28, 4) if board[j][i]>0])
-	
-	print()
-	
-	j = 1
-	print(["{}/{}{}".format(int(board[j][i]),int(board[j][i+1]), "⁷" if board[j][i+2]==0 else "") for i in range(0, 28, 4) if board[j][i]>0])
-	print(int(board[j][h.playerHealthIndex]), int(board[j][h.playerManaIndex]), [direwolf.og_deck_names[h.handTrackerIndices.index(i)] for i in h.handTrackerIndices if board[j][i] == 1], "*" if board[j][h.playerTurnTrackerIndex] == 1 else "")
-	
-	print()
-	print(' '.join(["[{}:{} {} ({})]".format(h.extractAction(l)[0], h.extractAction(l)[1], h.extractAction(l)[2], l) for l in listValidMoves(board, -1)]))
-	
-	print("\n")
+	print(tostring(board))
 	
 def tostring(board):
 	h = HearthstoneGame()
@@ -445,7 +452,7 @@ def tostring(board):
 	s+=("\n\n")
 	
 	j = 0
-	s+=str(int(board[j][h.playerHealthIndex])) + " " + str(int(board[j][h.playerManaIndex])) + " " + ' '.join(["[{}]".format(direwolf.og_deck_names[h.handTrackerIndices.index(i)]) for i in h.handTrackerIndices if board[j][i] == 1])
+	s+=str(int(board[j][h.playerHealthIndex])) + " " + str(int(board[j][h.playerManaIndex])) + " " + ' '.join(["[{}]".format(h.decknames[j+1][h.handTrackerIndices.index(i)]) for i in h.handTrackerIndices if board[j][i] == 1])
 	s+="\n"
 	s+=str(["{}/{}{}".format(int(board[j][i]),int(board[j][i+1]), "⁷" if board[j][i+2]==0 else "") for i in range(0, 28, 4) if board[j][i]>0])
 	s+="\n"
@@ -455,7 +462,7 @@ def tostring(board):
 	j = 1
 	s+=str(["{}/{}{}".format(int(board[j][i]),int(board[j][i+1]), "⁷" if board[j][i+2]==0 else "") for i in range(0, 28, 4) if board[j][i]>0])
 	s+="\n"
-	s+=str(int(board[j][h.playerHealthIndex])) + " " + str(int(board[j][h.playerManaIndex])) + " " + ' '.join(["[{}]".format(direwolf.og_deck_names[h.handTrackerIndices.index(i)]) for i in h.handTrackerIndices if board[j][i] == 1])	
+	s+=str(int(board[j][h.playerHealthIndex])) + " " + str(int(board[j][h.playerManaIndex])) + " " + ' '.join(["[{}]".format(h.decknames[j+1][h.handTrackerIndices.index(i)]) for i in h.handTrackerIndices if board[j][i] == 1])	
 	
 	s+=("\n\n")
 	s+=(' '.join(["[{}:{} {} ({})]".format(h.extractAction(l)[0], h.extractAction(l)[1], h.extractAction(l)[2], l) for l in listValidMoves(board, -1)]))
@@ -510,7 +517,7 @@ def dfs_lethal_solver(board, player=1):
 
 ## -- tests -- ##
 h=HearthstoneGame()
-penguinId = direwolf.og_deck_names.index("Snowflipper Penguin")
+penguinId = h.player1_deck_names.index("Town Crier")
 
 	
 def test_getHeroPowerAction():
@@ -522,7 +529,7 @@ def test_getHeroPowerAction():
 	
 def test_frostboltingEveryone():
 	b = h.getInitBoard()
-	fsIdx = direwolf.og_deck_names.index("Frostbolt")
+	fsIdx = h.player1_deck_names.index("Shield Slam")
 
 	for j in h.handTrackerIndices:
 		b[0][j] = 0
@@ -536,8 +543,7 @@ def test_frostboltingEveryone():
 			b[0][i+h.minionCanAttackIndex] = 0
 			b[0][i+h.minionIdIndex] = penguinId 
 	
-	
-	for target in range(h.totalTargets):
+	for target in range(1, h.totalTargets-1, 1):
 		cIdx = h.getCardActionIndex(0, target)
 		v = h.getValidMoves(b, 1)
 		display(b)
@@ -550,7 +556,7 @@ def test_extractFinalCardIndex():
 
 def test_handleUntargetedSpell():
 	b = h.getInitBoard()
-	fsIdx = direwolf.og_deck_names.index("Flamestrike")
+	fsIdx = h.player1_deck_names.index("Whirlwind")
 
 	for j in h.handTrackerIndices: b[0][j] = 0
 	b[0][h.handTrackerIndices[fsIdx]] = 1
@@ -571,8 +577,8 @@ def test_ogDeck_noDuplicates():
 
 def test_handleTargetedCardOnlyMinionTarget():
 	b = h.getInitBoard()
-	exIdx = direwolf.og_deck_names.index("Blessing of Kings")
-	cwIdx = direwolf.og_deck_names.index("Chillwind Yeti")
+	exIdx = h.player1_deck_names.index("Shield Slam")
+	cwIdx = h.player1_deck_names.index("Gluttonous Ooze")
 
 	for j in h.handTrackerIndices: b[0][j] = 0
 	b[0][h.handTrackerIndices[exIdx]] = 1
@@ -584,54 +590,8 @@ def test_handleTargetedCardOnlyMinionTarget():
 
 	b,p = h.getNextState(b, 1, h.getCardActionIndex(0,8))
 
-	assert(b[1][0] == 8)
-	assert(b[1][1] == 9)
-
-def test_handleExecute():
-	b = h.getInitBoard()
-	exIdx = direwolf.og_deck_names.index("Execute")
-	cwIdx = direwolf.og_deck_names.index("Chillwind Yeti")
-
-	for j in h.handTrackerIndices: b[0][j] = 0
-	b[0][h.handTrackerIndices[exIdx]] = 1
-
-	b[0][0] = 1
-	b[0][1] = 1
-	b[0][2] = 1
-	b[0][3] = penguinId
-	b[1][0] = 4
-	b[1][1] = 5
-	b[1][2] = 0
-	b[1][3] = cwIdx
-	b[0][h.playerManaIndex] = 10
-	b = h.syncBoard(b)
-
-	b,p = h.getNextState(b, 1, h.getMinionActionIndex(0,0))
-
-	g = h.injectBoard(b)
-	display(b)
-
-	b,p = h.getNextState(b, 1, h.getCardActionIndex(0,8))
-
-	assert(b[1][0] == 0)
-	assert(b[1][1] == 0)
-
-def test_handleTargetedCardAnyTarget():
-	b = h.getInitBoard()
-	fsIdx = direwolf.og_deck_names.index("Frostbolt")
-
-	for j in h.handTrackerIndices: b[0][j] = 0
-	b[0][h.handTrackerIndices[fsIdx]] = 1
-	b[1][0] = 1
-	b[1][1] = 1
-	b[1][2] = 0
-	b[1][3] = penguinId
-	b[0][h.playerManaIndex] = 10
-
-	b,p = h.getNextState(b, 1, h.getCardActionIndex(0,0))
-
-	assert(b[0][0] == 0)
-	assert(b[0][1] == 0)
+	assert(b[1][0] == 4)
+	assert(b[1][1] == 5)
 	
 def test_injectBoard_fatigueDeath():
 	board = h.getInitBoard()
@@ -655,8 +615,11 @@ def test_injectExtractMatch():
 	game = h.injectBoard(board)
 	nboard = h.extractBoard(game)
 
-	print(board)
-	print(nboard)
+	print(tostring(board))
+	print(tostring(nboard))
+	print()
+	print(([board[0][i] for i in h.handTrackerIndices]))
+	print(([nboard[0][i] for i in h.handTrackerIndices]))
 	
 	for i in range(len(board[0])):
 		assert(board[0][i] == nboard[0][i])

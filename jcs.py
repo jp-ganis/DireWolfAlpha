@@ -320,10 +320,11 @@ if __name__ == '__main__':
 	uct10 = lambda b: UCT(rootstate=b, itermax=10, verbose=True)
 	lelBot_010 = lambda b: mp_UCT(rootstate=b, itermax=12, verbose=False)
 	lelBot_100 = lambda b: mp_UCT(rootstate=b, itermax=100, verbose=False)
-	lelBot_400 = lambda b: mp_UCT(rootstate=b, itermax=400, verbose=False)
 	lelBot_800 = lambda b: mp_UCT(rootstate=b, itermax=800, verbose=False)
+	lelBot_400 = lambda b: mp_UCT(rootstate=b, itermax=400, verbose=False)
 	lelBot_1600 = lambda b: mp_UCT(rootstate=b, itermax=1600, verbose=False)
 	lelBot_3200 = lambda b: mp_UCT(rootstate=b, itermax=3200, verbose=False)
+	t9000 = lambda b: mp_UCT(rootstate=b, itermax=9000, verbose=False)
 	
 	valueBot = lambda b: b.GetBestBoardControlMove()
 	faceBot = lambda b: b.GetBestFaceMove()
@@ -331,7 +332,7 @@ if __name__ == '__main__':
 	wins = {1:0, -1:0}
 	matches = int(sys.argv[1])
 	
-	player_1 = lelBot_3200
+	player_1 = humBot
 	player_2 = valueBot
 	
 	total_time = 0.0
@@ -347,7 +348,7 @@ if __name__ == '__main__':
 			total_time += time.time() - s
 			time_per_game = total_time / (wins[1] + wins[-1])
 		
-			print("[ {}:{} - {} games remaining, {} per game ]".format(wins[1], wins[-1], matches*2 - (wins[1]+wins[-1]), time.strftime('%H:%M:%S', time.gmtime(time_per_game))))
+			print("[ {}:{} - {} games remaining, {} per game ]".format(wins[1], wins[-1], matches*2 - (wins[1]+wins[-1]), time.strftime('%H:%M:%S', time.gmtime(time.time() - s))))
 	print()
 		
 		
