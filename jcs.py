@@ -330,9 +330,9 @@ if __name__ == '__main__':
 	faceBot = lambda b: b.GetBestFaceMove()
 	
 	wins = {1:0, -1:0}
-	matches = int(sys.argv[1])
+	matches = int(sys.argv[1]) if len(sys.argv) > 1 else 3
 	
-	player_1 = humBot
+	player_1 = passBot
 	player_2 = valueBot
 	
 	total_time = 0.0

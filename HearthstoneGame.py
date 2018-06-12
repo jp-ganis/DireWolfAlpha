@@ -331,9 +331,8 @@ class HearthstoneGame():
 		for character in player.characters[1:]:
 			minion_id = _player_deck.index(character.id)
 			minion_data = [character.atk, character.health, int(character.can_attack()), minion_id, int(character.divine_shield)]
-			
-			assert(len(minion_data) == self.minionSize)
 			minions += minion_data
+			assert len(minion_data) == self.minionSize, "Minion data being added not of correct size."
 			
 		for _ in range(self.maxMinions - (len(player.characters)-1)):
 			minions += [0 for _ in range(self.minionSize)]
@@ -418,7 +417,13 @@ class HearthstoneGame():
 					card.turns_in_play = 1 if row[mi + self.minionCanAttackIndex] > 0 else 0
 
 					card.atk = row[mi + self.minionAttackIndex]
-					card.damage = card.max_health - row[mi + self.minionHealthIndex]
+					try:
+						card.damage = card.max_health - row[mi + self.minionHealthIndex]
+					except Exception as e: 
+						print(player.field)
+						print(row[mi], mi, cardIdx, _player_deck[cardIdx], card)
+						raise e
+						
 					card.divine_shield = bool(row[mi + self.minionDivineShieldIndex])
 					card.zone = Zone.PLAY
 
@@ -463,13 +468,13 @@ def tostring(board):
 	j = 0
 	s+=str(int(board[j][h.playerHealthIndex])) + " " + str(int(board[j][h.playerManaIndex])) + " " + ' '.join(["[{}]".format(h.decknames[j+1][h.handTrackerIndices.index(i)]) for i in h.handTrackerIndices if board[j][i] == 1])
 	s+="\n"
-	s+=str(["{}/{}{}".format(int(board[j][i]),int(board[j][i+1]), "⁷" if board[j][i+2]==0 else "") for i in range(0, 28, 4) if board[j][i]>0])
+	s+=str(["{}/{}{}".format(int(board[j][i]),int(board[j][i+1]), "⁷" if board[j][i+2]==0 else "") for i in range(0, h.minionSize*h.maxMinions, h.minionSize) if board[j][i]>0])
 	s+="\n"
 	
 	s+=("\n")
 	
 	j = 1
-	s+=str(["{}/{}{}".format(int(board[j][i]),int(board[j][i+1]), "⁷" if board[j][i+2]==0 else "") for i in range(0, 28, 4) if board[j][i]>0])
+	s+=str(["{}/{}{}".format(int(board[j][i]),int(board[j][i+1]), "⁷" if board[j][i+2]==0 else "") for i in range(0, h.minionSize*h.maxMinions, h.minionSize) if board[j][i]>0])
 	s+="\n"
 	s+=str(int(board[j][h.playerHealthIndex])) + " " + str(int(board[j][h.playerManaIndex])) + " " + ' '.join(["[{}]".format(h.decknames[j+1][h.handTrackerIndices.index(i)]) for i in h.handTrackerIndices if board[j][i] == 1])	
 	
@@ -1020,3 +1025,57 @@ def test_turnTime():
 			p = 1
 	t = (time.time()-s)/(r-o)
 	assert(t <= 0.1)
+	
+def test_RockPoolHunter():
+	b = h.getInitBoard()
+	
+	mrglIdx = h.player2_deck_names.index("Murloc Tidecaller")
+	rockpoolIdx = h.player2_deck_names.index("Rockpool Hunter")
+
+	for j in h.handTrackerIndices: b[1][j] = 0
+	b[1][h.handTrackerIndices[rockpoolIdx]] = 1
+	
+	b[1][0] = 1
+	b[1][1] = 2
+	b[1][2] = 0
+	b[1][3] = mrglIdx
+	
+	b,p = h.getNextState(b, 1, 239)
+	b,p = h.getNextState(b, p, 239)
+	b,p = h.getNextState(b, p, 239)
+	b,p = h.getNextState(b, p, 239)
+	b,p = h.getNextState(b, p, 239)
+	
+	b,p = h.getNextState(b, -1, h.getCardActionIndex(0, 1))
+	
+	display(b)
+
+	assert(b[1][0] == 3)
+	assert(b[1][1] == 3)
+	
+def test_CallToArms():
+	b = h.getInitBoard()
+	
+	c2aIdx = h.player2_deck_names.index("Call to Arms")
+	b[1][h.playerTurnTrackerIndex] = 1
+	
+	for j in h.handTrackerIndices: b[1][j] = 0
+	b[1][h.handTrackerIndices[c2aIdx]] = 1
+	
+	b[1][h.playerManaIndex] = 10
+	
+	b,p = h.getNextState(b, -1, h.getCardActionIndex(0, h.passTarget))
+	b[1][h.playerManaIndex] = 10
+	
+	
+	c2aIdx = h.player2_deck_names.index("Sunkeeper Tarim")
+	for j in h.handTrackerIndices: b[1][j] = 0
+	b[1][h.handTrackerIndices[c2aIdx]] = 1
+	b,p = h.getNextState(b, -1, h.getCardActionIndex(0, h.passTarget))
+	
+	g = h.injectBoard(b)
+	display(b)
+
+	assert(len(g.player2.field) == 4)
+	assert(b[1][0] == 3)
+	assert(b[1][1] == 3)

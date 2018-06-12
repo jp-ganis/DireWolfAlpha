@@ -19,11 +19,11 @@ def get_murloc_paladin_deck():
 	# n += 2*["Unidentified Maul"] ## NYI (Truesilver Champion)
 	
 	n += 2*["Murloc Tidecaller"]
-	n += 2*["Rockpool Hunter"] ## NYI
+	n += 2*["Rockpool Hunter"]
 	n += 2*["Call to Arms"]
 	n += 2*["Bluegill Warrior"]
 	n += 2*["Righteous Protector"]
-	n += 2*["Lost in the Jungle"] ## NYI
+	n += 2*["Lost in the Jungle"]
 	n += 1*["Coldlight Seer"]
 	n += 2*["Murloc Warleader"]
 	n += 2*["Nightmare Amalgam"]
@@ -31,9 +31,9 @@ def get_murloc_paladin_deck():
 	n += 2*["Knife Juggler"]
 	n += 1*["The Black Knight"]
 	n += 1*["Sea Giant"]
-	n += 1*["Sunkeeper Tarim"] ## NYI
-	n += 1*["Vinecleaver"] ## NYI
-	n += 1*["Fungalmancer"] ## NYI
+	n += 1*["Sunkeeper Tarim"]
+	n += 1*["Vinecleaver"]
+	n += 1*["Fungalmancer"]
 	n += 2*["Divine Favor"]
 	n += 1*["Spellbreaker"]
 	n += 1*["Blessing of Kings"]
@@ -133,8 +133,8 @@ def setup_game():
 	from fireplace.player import Player
 	fireplace.cards.filter(name="Garrosh")
 
-	player1 = Player("OddWarrior", og_deck, CardClass.WARRIOR.default_hero)
-	player2 = Player("MurlocPaladin", og_deck, CardClass.PALADIN.default_hero)
+	player1 = Player("OddWarrior", warrior_deck, CardClass.WARRIOR.default_hero)
+	player2 = Player("MurlocPaladin", paladin_deck, CardClass.PALADIN.default_hero)
 	
 	game = Game(players=(player1,player2))
 	game.start()
@@ -166,6 +166,17 @@ if __name__ == '__main__':
 		card = Card(c[1])
 		
 	print("\n\n")	
-
 	
+	game = setup_game()
+	game.end_turn()
+	game.end_turn()
+	game.end_turn()
+	game.end_turn()
+	game.end_turn()
+	game.end_turn()
+	for card in game.player2.hand:
+		if card.is_playable():
+			print(card)
+			card.play()
+	print(game.player2.field)
 	
