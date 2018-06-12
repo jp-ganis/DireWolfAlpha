@@ -333,23 +333,26 @@ class HearthstoneGame():
 		minions = []
 
 		for character in player.characters[1:]:
-			minion_id = _player_deck.index(character.id) if character.id != 'CS2_101t' else -1
+			minion_id = _player_deck.index(character.id)
 			minions += [character.atk, character.health, int(character.can_attack()), minion_id]
 		for _ in range(self.maxMinions - (len(player.characters)-1)):
 			minions += [0 for _ in range(self.minionSize)]
 		
-		for i in range(self.deckSize):
+		print(player.hand)
+		for i in range(len(_player_deck)):
 			card = _player_deck[i]
 			next_card = _player_deck[i+1] if i+1 < self.deckSize else None
 			
 			if card == next_card:	
 				handTracker[i] = int( card in [i.id for i in player.hand] )
+				handTracker[i+1] = int( [i.id for i in player.hand].count(card) == 2 )
 				deckTracker[i] = int( [i.id for i in player.deck].count(card) == 2 )		
 			else:
-				handTracker[i] = int( [i.id for i in player.hand].count(card) == 2 )
+				handTracker[i] = int( card in [i.id for i in player.hand] )
 				deckTracker[i] = int( card in [i.id for i in player.deck] )
 				
 			last_card = card
+		print(len(player.hand), sum(handTracker))
 			
 		row = [0 for _ in range(self.getBoardSize()[1])]
 		
@@ -521,6 +524,8 @@ penguinId = h.player1_deck_names.index("Town Crier")
 
 def test_drawCardEndOfTurn():
 	b = h.getInitBoard()
+	g = h.injectBoard(b)
+	
 	occ = b[0][h.playerCardsInHandIndex]
 	turns = 3
 	
@@ -528,8 +533,6 @@ def test_drawCardEndOfTurn():
 		b, _ = h.getNextState(b, 1, 239)
 		b, _ = h.getNextState(b, -1, 239)
 	
-	g = h.injectBoard(b)
-	print(g.player1.hand)
 	display(b)
 	assert(b[0][h.playerCardsInHandIndex] == occ + turns)
 	
@@ -624,12 +627,6 @@ def test_injectExtractMatch():
 	board = h.getInitBoard()
 	game = h.injectBoard(board)
 	nboard = h.extractBoard(game)
-
-	print(tostring(board))
-	print(tostring(nboard))
-	print()
-	print(([board[0][i] for i in h.handTrackerIndices]))
-	print(([nboard[0][i] for i in h.handTrackerIndices]))
 	
 	for i in range(len(board[0])):
 		assert(board[0][i] == nboard[0][i])
