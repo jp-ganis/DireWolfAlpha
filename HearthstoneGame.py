@@ -36,7 +36,7 @@ class HearthstoneGame():
 		self.decklists = [None, self.player1_deck, self.player2_deck]
 		self.decknames = [None, self.player1_deck_names, self.player2_deck_names]
 
-		self.minionSize = 4
+		self.minionSize = 5
 
 		self.playerCanHeroPowerIndex = -5
 		self.playerTurnTrackerIndex = -4
@@ -58,6 +58,7 @@ class HearthstoneGame():
 		self.minionHealthIndex = 1
 		self.minionCanAttackIndex = 2
 		self.minionIdIndex = 3
+		self.minionDivineShieldIndex = 4
 		
 		self.enemyTargets = 9
 		self.totalTargets = 16
@@ -168,12 +169,7 @@ class HearthstoneGame():
 		try:			
 			if action < self.maxMinionTargetIndex:
 				attacker, target = self.extractMinionAction(action)
-				try:
-					minion = game.players[idx].field[attacker]
-				except:
-					print(action, attacker, target)
-					display(board)
-					assert(1==2)
+				minion = game.players[idx].field[attacker]
 				
 				if target == self.faceTarget:
 					minion.attack(game.players[jdx].characters[0])
@@ -334,25 +330,34 @@ class HearthstoneGame():
 
 		for character in player.characters[1:]:
 			minion_id = _player_deck.index(character.id)
-			minions += [character.atk, character.health, int(character.can_attack()), minion_id]
+			minion_data = [character.atk, character.health, int(character.can_attack()), minion_id, int(character.divine_shield)]
+			
+			assert(len(minion_data) == self.minionSize)
+			minions += minion_data
+			
 		for _ in range(self.maxMinions - (len(player.characters)-1)):
 			minions += [0 for _ in range(self.minionSize)]
 		
-		print(player.hand)
+		_flag = False
 		for i in range(len(_player_deck)):
 			card = _player_deck[i]
 			next_card = _player_deck[i+1] if i+1 < self.deckSize else None
 			
-			if card == next_card:	
+			if _flag:
+				_flag = False
+				continue
+			elif card == next_card:	
+				_flag = True
 				handTracker[i] = int( card in [i.id for i in player.hand] )
 				handTracker[i+1] = int( [i.id for i in player.hand].count(card) == 2 )
+				
+				deckTracker[i+1] = int( card in [i.id for i in player.deck] )
 				deckTracker[i] = int( [i.id for i in player.deck].count(card) == 2 )		
 			else:
 				handTracker[i] = int( card in [i.id for i in player.hand] )
 				deckTracker[i] = int( card in [i.id for i in player.deck] )
 				
 			last_card = card
-		print(len(player.hand), sum(handTracker))
 			
 		row = [0 for _ in range(self.getBoardSize()[1])]
 		
@@ -414,6 +419,7 @@ class HearthstoneGame():
 
 					card.atk = row[mi + self.minionAttackIndex]
 					card.damage = card.max_health - row[mi + self.minionHealthIndex]
+					card.divine_shield = bool(row[mi + self.minionDivineShieldIndex])
 					card.zone = Zone.PLAY
 
 			for i in hti:
@@ -582,9 +588,14 @@ def test_handleUntargetedSpell():
 	b[1][3] = penguinId
 	b[0][h.playerManaIndex] = 10
 
-	display(b)
 	b,p = h.getNextState(b,1,h.getCardActionIndex(0,h.passTarget))
-
+	
+	for j in h.handTrackerIndices: b[0][j] = 0
+	b[0][h.handTrackerIndices[fsIdx]] = 1
+	
+	b,p = h.getNextState(b,1,h.getCardActionIndex(0,h.passTarget))
+	display(b)
+	
 	assert(b[1][0] == 0)
 	assert(b[1][1] == 0)
 
@@ -595,16 +606,18 @@ def test_handleTargetedCardOnlyMinionTarget():
 
 	for j in h.handTrackerIndices: b[0][j] = 0
 	b[0][h.handTrackerIndices[exIdx]] = 1
-	b[1][0] = 4
-	b[1][1] = 5
-	b[1][2] = 0
-	b[1][3] = cwIdx
+	
+	b[0][0] = 4
+	b[0][1] = 5
+	b[0][2] = 0
+	b[0][3] = cwIdx
+	
 	b[0][h.playerManaIndex] = 10
 
-	b,p = h.getNextState(b, 1, h.getCardActionIndex(0,8))
+	b,p = h.getNextState(b, 1, h.getCardActionIndex(0,1))
 
-	assert(b[1][0] == 4)
-	assert(b[1][1] == 5)
+	assert(b[0][0] == 4)
+	assert(b[0][1] == 5)
 	
 def test_injectBoard_fatigueDeath():
 	board = h.getInitBoard()
@@ -1006,4 +1019,4 @@ def test_turnTime():
 			b = h.getInitBoard()
 			p = 1
 	t = (time.time()-s)/(r-o)
-	assert(t <= 0.04)
+	assert(t <= 0.1)
