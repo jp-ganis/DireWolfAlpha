@@ -329,7 +329,8 @@ class HearthstoneGame():
 		minions = []
 
 		for character in player.characters[1:]:
-			minions += [character.atk, character.health, int(character.can_attack()), _player_deck.index(character.id)]
+			minion_id = _player_deck.index(character.id) if character.id != 'CS2_101t' else -1
+			minions += [character.atk, character.health, int(character.can_attack()), minion_id]
 		for _ in range(self.maxMinions - (len(player.characters)-1)):
 			minions += [0 for _ in range(self.minionSize)]
 		
@@ -572,9 +573,6 @@ def test_handleUntargetedSpell():
 	assert(b[1][0] == 0)
 	assert(b[1][1] == 0)
 
-def test_ogDeck_noDuplicates():
-	assert(len(direwolf.og_deck) == len(list(set(direwolf.og_deck))))
-
 def test_handleTargetedCardOnlyMinionTarget():
 	b = h.getInitBoard()
 	exIdx = h.player1_deck_names.index("Shield Slam")
@@ -624,21 +622,6 @@ def test_injectExtractMatch():
 	for i in range(len(board[0])):
 		assert(board[0][i] == nboard[0][i])
 	
-def test_injectBoard_allMinions():
-	board = h.getInitBoard()
-	
-	for i in h.handTrackerIndices:
-		for j in [0,1]:
-			board[j][i] = 1
-	
-	game = h.injectBoard(board)
-	
-	player = game.players[0]
-	jplayer = game.players[1]
-	
-	assert(len(player.hand) == len(direwolf.og_deck))
-	assert(len(jplayer.hand) == len(direwolf.og_deck))
-	
 def test_injectBoard_cardsInHand_afterOneTurn():
 	board = h.getInitBoard()
 	game = h.injectBoard(board)
@@ -662,7 +645,7 @@ def test_initBoard_correctDeck():
 	game = h.injectBoard(board)
 	player = game.players[0]
 	
-	assert(len(player.deck) == len(direwolf.og_deck)-board[0][h.playerCardsInHandIndex])
+	assert(len(player.deck) == len(h.player1_deck)-board[0][h.playerCardsInHandIndex])
 	
 def test_getGameEnded_player2Win():
 	board = h.getInitBoard()
@@ -726,17 +709,16 @@ def test_getNextState_minionGoesFace_player2():
 
 def test_getNextState_oneMinionAttacking_oneMinionDefending_player1():
 	board = h.getInitBoard()
-	mId = 1
 
 	board[0][0] = 2
 	board[0][1] = 3
 	board[0][2] = 0
-	board[0][3] = mId
+	board[0][3] = penguinId
 	
 	board[1][0] = 2
 	board[1][1] = 3
 	board[1][2] = 0
-	board[1][3] = mId
+	board[1][3] = penguinId
 	
 	game = h.injectBoard(board)
 	game.end_turn()
@@ -752,17 +734,16 @@ def test_getNextState_oneMinionAttacking_oneMinionDefending_player1():
 
 def test_getNextState_oneMinionAttacking_oneMinionDefending_player2():
 	board = h.getInitBoard()
-	mId = 1
-
+	
 	board[0][0] = 2
 	board[0][1] = 3
 	board[0][2] = 0
-	board[0][3] = mId
+	board[0][3] = penguinId
 	
 	board[1][0] = 2
 	board[1][1] = 3
 	board[1][2] = 0
-	board[1][3] = mId
+	board[1][3] = penguinId
 	
 	game = h.injectBoard(board)
 	game.end_turn()
@@ -781,12 +762,11 @@ def test_getValidMoves_onlyPass():
 	
 def test_getValidMoves_oneSleepingMinion():
 	board = h.getInitBoard()
-	mId = 1
 	
 	board[0][0] = 1
 	board[0][1] = 0
 	board[0][2] = 0
-	board[0][3] = mId
+	board[0][3] = penguinId
 	
 	v = h.getValidMoves(board, 1)
 	assert(v[h.getMinionActionIndex(0, 0)] == 0)
@@ -796,12 +776,11 @@ def test_getValidMoves_oneSleepingMinion():
 	
 def test_getValidMoves_oneMinionAttacking():
 	board = h.getInitBoard()
-	mId = 1
 	
 	board[0][0] = 2
 	board[0][1] = 3
 	board[0][2] = 0
-	board[0][3] = mId
+	board[0][3] = penguinId
 	
 	game = h.injectBoard(board)
 	game.end_turn()
@@ -816,17 +795,16 @@ def test_getValidMoves_oneMinionAttacking():
 
 def test_getValidMoves_oneMinionAttacking_oneMinionDefending_player1():
 	board = h.getInitBoard()
-	mId = 1
 	
 	board[0][0] = 2
 	board[0][1] = 3
 	board[0][2] = 0
-	board[0][3] = mId
+	board[0][3] = penguinId
 	
 	board[1][0] = 2
 	board[1][1] = 3
 	board[1][2] = 0
-	board[1][3] = mId
+	board[1][3] = penguinId
 	
 	game = h.injectBoard(board)
 	
@@ -842,17 +820,16 @@ def test_getValidMoves_oneMinionAttacking_oneMinionDefending_player1():
 	
 def test_getValidMoves_oneMinionAttacking_oneMinionDefending_player2():
 	board = h.getInitBoard()
-	mId = 1
 	
 	board[0][0] = 2
 	board[0][1] = 3
 	board[0][2] = 0
-	board[0][3] = mId
+	board[0][3] = penguinId
 	
 	board[1][0] = 2
 	board[1][1] = 3
 	board[1][2] = 0
-	board[1][3] = mId
+	board[1][3] = penguinId
 	
 	game = h.injectBoard(board)
 	game.end_turn()
@@ -868,12 +845,11 @@ def test_getValidMoves_oneMinionAttacking_oneMinionDefending_player2():
 	
 def test_injectAndExtract():
 	board = h.getInitBoard()
-	mId = 1
 	
 	board[0][0] = 1
 	board[0][1] = 0
 	board[0][2] = 0
-	board[0][3] = mId
+	board[0][3] = penguinId
 	
 	irow = board[0]
 	game = h.injectBoard(board)
@@ -884,12 +860,11 @@ def test_injectAndExtract():
 	
 def test_extractRow():
 	board = h.getInitBoard()
-	mId = 1
 	
 	board[0][0] = 2
 	board[0][1] = 3
 	board[0][2] = 0
-	board[0][3] = mId
+	board[0][3] = penguinId
 	
 	game = h.injectBoard(board)
 	
@@ -903,35 +878,7 @@ def test_extractRow():
 	assert(row[0] == 2)
 	assert(row[1] == 3)
 	assert(row[2] == 0)
-	assert(row[3] == mId)
-	
-def test_injectBoard():
-	board = h.getInitBoard()
-	mId = 1
-	
-	board[0][0] = 2
-	board[0][1] = 3
-	board[0][2] = 0
-	board[0][3] = mId
-	
-	game = h.injectBoard(board)
-	
-	for i in [0,1]:
-		player = game.players[i]
-		assert(player.hero.health == h.startingHealth)
-		assert(player.mana == 0)
-		assert(player.max_mana == 0)
-	assert(game.board[0].id == direwolf.og_deck[mId])
-	assert(game.current_player == game.players[0])
-	assert(len(game.board) == 1)
-
-def test_injectBoard_handIndex():
-	board = h.getInitBoard()
-
-	board[0][h.handTrackerIndices[0]] = 1
-
-	game = h.injectBoard(board)
-	assert(game.players[0].hand[0].id == direwolf.og_deck[0])
+	assert(row[3] == penguinId)
 	
 def test_getBoardSize():
 	assert(h.getBoardSize() == (2, h.maxMinions * h.minionSize + h.playerSize))
@@ -944,9 +891,6 @@ def test_getInitBoard():
 		assert(row[h.playerHealthIndex] == h.startingHealth)
 		assert(row[h.playerManaIndex] == 0)
 		assert(row[h.playerCardsInHandIndex] == 3)
-
-		for i in h.deckTrackerIndices:
-			assert(row[i] == 1)
 			
 def test_getActionSize():
 	assert(h.getActionSize() == 240)
@@ -996,6 +940,7 @@ def test_heroPowerTargeted():
 			b[0][i+k] = 1
 			b[1][i+k] = 1
 			b[0][i+h.minionCanAttackIndex] = 0
+			b[0][i+h.minionIdIndex] = penguinId 
 	
 	v = h.getValidMoves(b, 1)
 	for target in range(h.totalTargets):
@@ -1016,12 +961,12 @@ def test_heroPowerUntargeted():
 def test_canOnlyHeroPowerOnce():
 	b = h.getInitBoard()
 
-	b[1][h.playerManaIndex] = 10
-	b[1][h.playerCanHeroPowerIndex] = 1
-	b[1][h.playerTurnTrackerIndex] = 1
+	b[0][h.playerManaIndex] = 10
+	b[0][h.playerCanHeroPowerIndex] = 1
+	b[0][h.playerTurnTrackerIndex] = 1
 
-	b, _ = h.getNextState(b, -1, h.getHeroPowerActionIndex(0))
-	v = h.getValidMoves(b, -1)
+	b, _ = h.getNextState(b, 1, h.getHeroPowerActionIndex(0))
+	v = h.getValidMoves(b, 1)
 	assert(v[h.getHeroPowerActionIndex(0)] == 0)
 
 def test_heroAttack():
@@ -1032,68 +977,6 @@ def test_weaponSummon():
 
 def test_handleChargeMinion():
 	pass
-
-def test_dfsLethalSolver_frostboltFace():
-	b = h.getInitBoard()
-	fsIdx = direwolf.og_deck_names.index("Frostbolt")
-
-	b[0][h.handTrackerIndices[fsIdx]] = 1
-	b[0][h.playerManaIndex] = 10
-	b[1][h.playerHealthIndex] = 3
-	
-	lethal = dfs_lethal_solver(b)
-	assert(len(lethal) > 0)
-	
-def test_dfsLethalSolver_frostboltAndAttack():
-	b = h.getInitBoard()
-	fsIdx = direwolf.og_deck_names.index("Frostbolt")
-
-	b[0][h.handTrackerIndices[fsIdx]] = 1
-	b[0][h.playerManaIndex] = 10
-	b[1][h.playerHealthIndex] = 4
-	
-	b[0][0] = 1
-	b[0][1] = 1
-	b[0][2] = 1
-	b[0][3] = 0
-	
-	b[1][0] = 1
-	b[1][1] = 1
-	b[1][2] = 1
-	b[1][3] = 0
-	
-	lethal = dfs_lethal_solver(b)
-	assert(len(lethal) > 0)
-
-def test_dfsLethalSolver_bittertideEasy():
-	b = h.getInitBoard()
-	bthIdx = direwolf.og_deck_names.index("Bittertide Hydra")
-	wpIdx = direwolf.og_deck_names.index("Wild Pyromancer")
-	wwIdx = direwolf.og_deck_names.index("Whirlwind")
-
-	b[0][h.handTrackerIndices[wpIdx]] = 1
-	b[0][h.handTrackerIndices[wwIdx]] = 1
-
-	b[0][16] = 1
-	b[0][17] = 1
-	b[0][18] = 1
-	b[0][19] = 0
-
-	b[1][0] = 8
-	b[1][1] = 8
-	b[1][2] = 0
-	b[1][3] = bthIdx
-
-	b[0][h.playerManaIndex] = 6
-	b[1][h.playerHealthIndex] = 6
-
-	
-	b,_ = h.getNextState(b, 1, 0)
-	display(b)
-
-	lethal = dfs_lethal_solver(b)
-	assert(len(lethal) > 0)
-
 	
 def test_turnTime():
 	import time
@@ -1115,4 +998,4 @@ def test_turnTime():
 			b = h.getInitBoard()
 			p = 1
 	t = (time.time()-s)/(r-o)
-	assert(t <= 0.1)
+	assert(t <= 0.05)
