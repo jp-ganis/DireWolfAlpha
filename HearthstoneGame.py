@@ -1,12 +1,16 @@
 import sys; sys.path.insert(0, '../fireplace'); sys.path.insert(0, './fireplace')
 from fireplace.exceptions import GameOver
 from hearthstone.enums import Zone
-import hs.direwolf as direwolf
 import fireplace.cards
 import numpy as np
 import pytest
 import copy 
 import py
+
+try:
+	import direwolf as direwolf
+except:
+	import hs.direwolf as direwolf
 
 import logging; logging.getLogger("fireplace").setLevel(logging.WARNING)
 	
@@ -407,12 +411,7 @@ class HearthstoneGame():
 
 					card.atk = row[mi + self.minionAttackIndex]
 					card.damage = card.max_health - row[mi + self.minionHealthIndex]
-					# card.zone = Zone.PLAY
-					## jptodo - we shouldn't summon a minion every turn. summoning should happen somewhere that isn't where we inject the board.
-					try:
-						player.summon(card)
-					except GameOver:
-						return game
+					card.zone = Zone.PLAY
 
 			for i in hti:
 				if row[i] == 1:
@@ -520,6 +519,19 @@ def dfs_lethal_solver(board, player=1):
 h=HearthstoneGame()
 penguinId = h.player1_deck_names.index("Town Crier")
 
+def test_drawCardEndOfTurn():
+	b = h.getInitBoard()
+	occ = b[0][h.playerCardsInHandIndex]
+	turns = 3
+	
+	for i in range(turns):
+		b, _ = h.getNextState(b, 1, 239)
+		b, _ = h.getNextState(b, -1, 239)
+	
+	g = h.injectBoard(b)
+	print(g.player1.hand)
+	display(b)
+	assert(b[0][h.playerCardsInHandIndex] == occ + turns)
 	
 def test_getHeroPowerAction():
 	idx = h.getHeroPowerActionIndex(0)
@@ -993,9 +1005,8 @@ def test_turnTime():
 		v = [i for i in range(len(v)) if v[i] == 1]
 		if v[0] == 239: o+=1
 		b, p = h.getNextState(b, p, v[0])
-		b = h.syncBoard(b)
 		if h.getGameEnded(b,p) != 0:
 			b = h.getInitBoard()
 			p = 1
 	t = (time.time()-s)/(r-o)
-	assert(t <= 0.05)
+	assert(t <= 0.04)

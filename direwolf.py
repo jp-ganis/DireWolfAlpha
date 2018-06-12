@@ -37,16 +37,20 @@ def get_murloc_paladin_deck():
 	n += 2*["Divine Favor"]
 	n += 1*["Spellbreaker"]
 	n += 1*["Blessing of Kings"]
+	n += 1*["Silver Hand Recruit"]
 	
 	return [(c, fireplace.cards.filter(name=c)[0]) for c in n if len(fireplace.cards.filter(name=c)) > 0]
 	
 def get_odd_warrior_deck():
 	n = []
-	n += 2*["Shield Slam"]
-	n += 2*["Town Crier"]
-	n += 2*["Whirlwind"]
-	n += 1*["Gluttonous Ooze"]
+	n += 1*["Gorehowl"]
+	n += 1*["Baku the Mooneater"]
+	n += 1*["King Mosh"]
 	n += 2*["Ironbeak Owl"]
+	n += 2*["Shield Slam"]
+	n += 2*["Whirlwind"]
+	n += 2*["Town Crier"]
+	n += 1*["Gluttonous Ooze"]
 	n += 2*["Rabid Worgen"]
 	n += 2*["Reckless Flurry"]
 	n += 2*["Shield Block"]
@@ -59,9 +63,6 @@ def get_odd_warrior_deck():
 	n += 1*["Faceless Manipulator"]
 	n += 1*["Harrison Jones"]
 	n += 1*["Baron Geddon"]
-	n += 1*["Gorehowl"]
-	n += 1*["Baku the Mooneater"]
-	n += 1*["King Mosh"]
 	
 	return [(c, fireplace.cards.filter(name=c)[0]) for c in n if len(fireplace.cards.filter(name=c)) > 0]
 
