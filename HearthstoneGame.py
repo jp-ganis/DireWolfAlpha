@@ -541,6 +541,29 @@ def dfs_lethal_solver(board, player=1):
 h=HearthstoneGame()
 penguinId = h.player1_deck_names.index("Town Crier")
 
+def test_weaponSummon():
+	b = h.getInitBoard()
+	fsIdx = h.player1_deck_names.index("Fiery War Axe")
+
+	for j in h.handTrackerIndices: b[0][j] = 0
+	b[0][h.handTrackerIndices[fsIdx]] = 1
+	b[1][0] = 1
+	b[1][1] = 1
+	b[1][2] = 0
+	b[1][3] = penguinId
+	b[0][h.playerManaIndex] = 10
+
+	b,p = h.getNextState(b,1,h.getMinionActionIndex(0, h.passTarget))
+	
+	for j in h.handTrackerIndices: b[0][j] = 0
+	b[0][h.handTrackerIndices[fsIdx]] = 1
+	
+	b,p = h.getNextState(b,1,h.getCardActionIndex(0,h.passTarget))
+	display(b)
+	
+	assert(b[1][0] == 0)
+	assert(b[1][1] == 0)
+
 def test_drawCardEndOfTurn():
 	b = h.getInitBoard()
 	g = h.injectBoard(b)
@@ -1003,13 +1026,7 @@ def test_canOnlyHeroPowerOnce():
 	b, _ = h.getNextState(b, 1, h.getHeroPowerActionIndex(0))
 	v = h.getValidMoves(b, 1)
 	assert(v[h.getHeroPowerActionIndex(0)] == 0)
-
-def test_heroAttack():
-	pass
-
-def test_weaponSummon():
-	pass
-
+	
 def test_handleChargeMinion():
 	pass
 	
