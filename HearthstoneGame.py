@@ -24,7 +24,7 @@ class HearthstoneGame():
 	def __init__(self):
 		self.startingHealth = 20
 		self.maxMinions = 7
-		self.minionSize = 4
+		self.minionSize = 5
 		self.deckSize = len(direwolf.warrior_deck)
 		
 		self.player1_deck = direwolf.warrior_deck
@@ -32,12 +32,23 @@ class HearthstoneGame():
 		
 		self.player2_deck = direwolf.paladin_deck
 		self.player2_deck_names = direwolf.paladin_deck_names
+		
+		assert len(self.player1_deck) == len(self.player2_deck), "Players must have equal sized decks. {} vs {}".format(len(self.player1_deck),len(self.player2_deck))
 			
 		self.decklists = [None, self.player1_deck, self.player2_deck]
 		self.decknames = [None, self.player1_deck_names, self.player2_deck_names]
 
-		self.minionSize = 5
+		self.enemyTargets = 9
+		self.totalTargets = 16
 
+		self.maxMinionTargetIndex = self.enemyTargets * self.maxMinions
+		self.maxCardTargetIndex = self.maxMinionTargetIndex + 10 * self.totalTargets
+		
+		self.passTarget = self.enemyTargets - 1
+		self.faceTarget = self.passTarget - 1
+		
+		self.boardMinionIndices = [i*self.minionSize for i in range(self.maxMinions)]
+		
 		self.playerCanHeroPowerIndex = -5
 		self.playerTurnTrackerIndex = -4
 		self.playerHealthIndex = -3
@@ -60,14 +71,6 @@ class HearthstoneGame():
 		self.minionIdIndex = 3
 		self.minionDivineShieldIndex = 4
 		
-		self.enemyTargets = 9
-		self.totalTargets = 16
-
-		self.maxMinionTargetIndex = self.enemyTargets * self.maxMinions
-		self.maxCardTargetIndex = self.maxMinionTargetIndex + 10 * self.totalTargets
-		
-		self.passTarget = self.enemyTargets - 1
-		self.faceTarget = self.passTarget - 1
 		
 	def getInitBoard(self):
 		"""
@@ -366,7 +369,11 @@ class HearthstoneGame():
 		row[self.playerCardsInHandIndex] = len(player.hand)
 		row[self.playerHealthIndex] = player.characters[0].health
 		row[self.playerManaIndex] = player.mana
+		
+		print(self.playerMaxManaIndex + len(row))
 		row[self.playerMaxManaIndex] = player.max_mana
+		print(row)
+		
 		row[self.playerTurnTrackerIndex] = int(player.current_player)
 		row[self.playerCanHeroPowerIndex] = int(player.hero.power.is_usable())
 		
