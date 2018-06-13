@@ -332,8 +332,8 @@ if __name__ == '__main__':
 	wins = {1:0, -1:0}
 	matches = int(sys.argv[1]) if len(sys.argv) > 1 else 3
 	
-	player_1 = humBot
-	player_2 = lelBot_100
+	player_1 = lelBot_400
+	player_2 = valueBot
 	
 	total_time = 0.0
 	time_per_game = 0.0
