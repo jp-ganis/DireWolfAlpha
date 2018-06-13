@@ -265,7 +265,6 @@ class HearthstoneGame():
 		for i in range(len(player.field)):
 			char = player.field[i]
 			if char.can_attack(debug=False):
-				print(char, char.attack_targets, self.faceTarget)
 				for target in char.attack_targets:
 					tIdx = -1
 					if target == enemyPlayer.hero:

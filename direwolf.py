@@ -28,7 +28,6 @@ def get_murloc_paladin_deck():
 	n += 2*["Murloc Warleader"]
 	n += 2*["Nightmare Amalgam"]
 	n += 2*["Truesilver Champion"]
-	n += 2*["Knife Juggler"]
 	n += 1*["The Black Knight"]
 	n += 1*["Sea Giant"]
 	n += 1*["Sunkeeper Tarim"]
@@ -39,7 +38,10 @@ def get_murloc_paladin_deck():
 	n += 1*["Blessing of Kings"]
 	n += 1*["Silver Hand Recruit"]
 	
-	return [(c, fireplace.cards.filter(name=c)[0]) for c in n if len(fireplace.cards.filter(name=c)) > 0]
+	deck = [(c, fireplace.cards.filter(name=c)[0]) for c in n if len(fireplace.cards.filter(name=c)) > 0]
+	
+	deck += 2*[("Knife Juggler","NEW1_019")] 
+	return deck
 	
 def get_odd_warrior_deck():
 	n = []
