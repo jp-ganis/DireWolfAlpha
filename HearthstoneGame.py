@@ -474,7 +474,7 @@ def tostring(board):
 	s+=("\n\n")
 	
 	j = 0
-	s+=str(int(board[j][h.playerHealthIndex])) + " " + str(int(board[j][h.playerManaIndex])) + " " + ' '.join(["[{}]".format(h.decknames[j+1][h.handTrackerIndices.index(i)]) for i in h.handTrackerIndices if board[j][i] == 1])
+	s+=str(int(board[j][h.playerHealthIndex])) + ("+{}".format(str(int(board[j][h.playerArmorIndex]))) if board[j][h.playerArmorIndex] > 0 else "") + " " + str(int(board[j][h.playerManaIndex])) + " " + ' '.join(["[{}]".format(h.decknames[j+1][h.handTrackerIndices.index(i)]) for i in h.handTrackerIndices if board[j][i] == 1])
 	s+="\n"
 	s+=str(["{}/{}{}".format(int(board[j][i]),int(board[j][i+1]), "⁷" if board[j][i+2]==0 else "") for i in range(0, h.minionSize*h.maxMinions, h.minionSize) if board[j][i]>0])
 	s+="\n"

@@ -332,8 +332,8 @@ if __name__ == '__main__':
 	wins = {1:0, -1:0}
 	matches = int(sys.argv[1]) if len(sys.argv) > 1 else 3
 	
-	player_1 = uct10
-	player_2 = uct10
+	player_1 = humBot
+	player_2 = lelBot_100
 	
 	total_time = 0.0
 	time_per_game = 0.0
@@ -344,7 +344,7 @@ if __name__ == '__main__':
 		print()
 		for i in play_orders.keys():
 			s = time.time()
-			wins[i*UCTPlayGame(play_orders[i][0], play_orders[i][1], verbose=humBot in play_orders[i])] += 1
+			wins[i*UCTPlayGame(play_orders[i][0], play_orders[i][1], verbose=False or humBot in play_orders[i])] += 1
 			total_time += time.time() - s
 			time_per_game = total_time / (wins[1] + wins[-1])
 		
