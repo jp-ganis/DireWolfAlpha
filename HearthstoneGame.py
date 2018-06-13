@@ -33,7 +33,7 @@ class HearthstoneGame():
 		self.player2_deck = direwolf.paladin_deck
 		self.player2_deck_names = direwolf.paladin_deck_names
 		
-		assert len(self.player1_deck) == len(self.player2_deck), "Players must have equal sized decks. {} vs {}".format(len(self.player1_deck),len(self.player2_deck))
+		assert len(self.player1_deck) == len(self.player2_deck), "Players must have equal sized decks."
 			
 		self.decklists = [None, self.player1_deck, self.player2_deck]
 		self.decknames = [None, self.player1_deck_names, self.player2_deck_names]

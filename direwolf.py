@@ -17,6 +17,7 @@ def get_murloc_paladin_deck():
 	# n += 2*["Gentle Megasaur"] ## probably also can't do adapt (Sea Giant + Black Knight)
 	# n += 2*["Hydrologist"] ## discover is busted (Bluegill Warrior)
 	# n += 2*["Unidentified Maul"] ## NYI (Truesilver Champion)
+	# n += 2*["Truesilver Champion"] ## can't do weapons
 	
 	n += 2*["Murloc Tidecaller"]
 	n += 2*["Rockpool Hunter"]
@@ -24,10 +25,9 @@ def get_murloc_paladin_deck():
 	n += 2*["Bluegill Warrior"]
 	n += 2*["Righteous Protector"]
 	n += 2*["Lost in the Jungle"]
-	n += 1*["Coldlight Seer"]
+	n += 2*["Coldlight Seer"]
 	n += 2*["Murloc Warleader"]
 	n += 2*["Nightmare Amalgam"]
-	n += 2*["Truesilver Champion"]
 	n += 1*["The Black Knight"]
 	n += 1*["Sea Giant"]
 	n += 1*["Sunkeeper Tarim"]
@@ -37,6 +37,7 @@ def get_murloc_paladin_deck():
 	n += 1*["Spellbreaker"]
 	n += 1*["Blessing of Kings"]
 	n += 1*["Silver Hand Recruit"]
+	n += 1*["Grimscale Oracle"]
 	
 	deck = [(c, fireplace.cards.filter(name=c)[0]) for c in n if len(fireplace.cards.filter(name=c)) > 0]
 	
@@ -56,7 +57,6 @@ def get_odd_warrior_deck():
 	n += 2*["Rabid Worgen"]
 	n += 2*["Reckless Flurry"]
 	n += 2*["Shield Block"]
-	n += 1*["Fiery War Axe"]
 	n += 1*["Big Game Hunter"]
 	n += 2*["Brawl"]
 	n += 1*["Darius Crowley"]
@@ -65,6 +65,7 @@ def get_odd_warrior_deck():
 	n += 1*["Hungry Crab"]
 	n += 1*["Harrison Jones"]
 	n += 1*["Baron Geddon"]
+	n += 1*["Acolyte of Pain"]
 	
 	return [(c, fireplace.cards.filter(name=c)[0]) for c in n if len(fireplace.cards.filter(name=c)) > 0]
 
