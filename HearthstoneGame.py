@@ -259,21 +259,23 @@ class HearthstoneGame():
 							tIdx = enemyPlayer.field.index(target) + 1 + 7
 						
 						if tIdx >= 0:
-							self.getCardActionIndex(i, tIdx)
 							validMoves[self.getCardActionIndex(i, tIdx)] = 1
 						
 		## attacks
-		for i in range(len(player.characters[1:])):
-			char = player.characters[1 + i]
+		for i in range(len(player.field)):
+			char = player.field[i]
 			if char.can_attack(debug=False):
-				faceIdx = self.getMinionActionIndex(i, self.faceTarget)
-				passIdx = self.getMinionActionIndex(i, self.passTarget)
-				validMoves[faceIdx] = 1
-				validMoves[passIdx] = 0
-				
-				for j in range(len(enemyPlayer.characters[1:])):
-					attackIdx = self.getMinionActionIndex(i, j)
-					validMoves[attackIdx] = 1
+				print(char, char.attack_targets, self.faceTarget)
+				for target in char.attack_targets:
+					tIdx = -1
+					if target == enemyPlayer.hero:
+						tIdx = self.faceTarget
+								
+					elif target in enemyPlayer.field:
+						tIdx = enemyPlayer.field.index(target)
+					
+					if tIdx >= 0:
+						validMoves[self.getMinionActionIndex(i, tIdx)] = 1
 
 		## hero power
 		if player.hero.power.is_usable():
@@ -369,11 +371,7 @@ class HearthstoneGame():
 		row[self.playerCardsInHandIndex] = len(player.hand)
 		row[self.playerHealthIndex] = player.characters[0].health
 		row[self.playerManaIndex] = player.mana
-		
-		print(self.playerMaxManaIndex + len(row))
 		row[self.playerMaxManaIndex] = player.max_mana
-		print(row)
-		
 		row[self.playerTurnTrackerIndex] = int(player.current_player)
 		row[self.playerCanHeroPowerIndex] = int(player.hero.power.is_usable())
 		
@@ -849,7 +847,7 @@ def test_getValidMoves_oneMinionAttacking_oneMinionDefending_player1():
 	v = h.getValidMoves(b, 1)
 	assert(v[h.getMinionActionIndex(0, 0)] == 1)
 	assert(v[h.getMinionActionIndex(0, 2)] == 0)
-	assert(v[h.getMinionActionIndex(0, h.faceTarget)] == 1)
+	assert(v[h.getMinionActionIndex(0, h.faceTarget)] == 0)
 	assert(v[h.getMinionActionIndex(0, h.passTarget)] == 0)
 	
 def test_getValidMoves_oneMinionAttacking_oneMinionDefending_player2():
