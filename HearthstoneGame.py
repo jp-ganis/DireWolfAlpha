@@ -40,30 +40,31 @@ class HearthstoneGame():
 
 		self.enemyTargets = 9
 		self.totalTargets = 16
+		
+		self.passTarget = self.enemyTargets - 1
+		self.faceTarget = self.passTarget - 1
 
 		self.maxMinionTargetIndex = self.enemyTargets * self.maxMinions
 		self.maxCardTargetIndex = self.maxMinionTargetIndex + 10 * self.totalTargets
 		
-		self.passTarget = self.enemyTargets - 1
-		self.faceTarget = self.passTarget - 1
-		
 		self.boardMinionIndices = [i*self.minionSize for i in range(self.maxMinions)]
 		
-		self.playerCanHeroPowerIndex = -5
-		self.playerTurnTrackerIndex = -4
-		self.playerHealthIndex = -3
-		self.playerManaIndex = -2
 		self.playerCardsInHandIndex = -1
+		self.playerManaIndex = -2
+		self.playerMaxManaIndex = -3
+		self.playerHealthIndex = -4
+		self.playerTurnTrackerIndex = -5
+		self.playerCanHeroPowerIndex = -6
+		self.playerArmorIndex = -7
 		
-		self.deckTrackerStartingIndex = -6
+		self.deckTrackerStartingIndex = -8
+		
 		self.deckTrackerIndices = [i for i in range(self.deckTrackerStartingIndex, self.deckTrackerStartingIndex-self.deckSize, -1)]
 		
 		self.handTrackerStartingIndex = self.deckTrackerIndices[-1] - 1
 		self.handTrackerIndices = [i for i in range(self.handTrackerStartingIndex, self.handTrackerStartingIndex-self.deckSize, -1)]
-		
-		self.playerMaxManaIndex = self.handTrackerIndices[-1] - 1
 
-		self.playerSize = sum([1 for _ in [self.playerHealthIndex, self.playerManaIndex, self.playerMaxManaIndex, self.playerTurnTrackerIndex]]) + len(self.deckTrackerIndices) + len(self.handTrackerIndices)
+		self.playerSize = sum([1 for _ in [self.playerHealthIndex, self.playerManaIndex, self.playerMaxManaIndex, self.playerTurnTrackerIndex, self.playerArmorIndex]]) + len(self.deckTrackerIndices) + len(self.handTrackerIndices)
 		
 		self.minionAttackIndex = 0
 		self.minionHealthIndex = 1
@@ -373,6 +374,8 @@ class HearthstoneGame():
 		row[self.playerMaxManaIndex] = player.max_mana
 		row[self.playerTurnTrackerIndex] = int(player.current_player)
 		row[self.playerCanHeroPowerIndex] = int(player.hero.power.is_usable())
+		row[self.playerArmorIndex] = player.hero.armor
+		
 		
 		for i in self.handTrackerIndices:
 			row[i] = handTracker[self.handTrackerIndices.index(i)]
@@ -413,6 +416,7 @@ class HearthstoneGame():
 			player.max_mana = int(row[mma])
 			player.used_mana = int(row[mma] - row[self.playerManaIndex])
 			player.hero.power.activations_this_turn = 0 if row[self.playerCanHeroPowerIndex] == 1 else 1
+			player.hero.armor = row[self.playerArmorIndex]
 			
 			for mi in mis:
 				if row[mi] > 0:

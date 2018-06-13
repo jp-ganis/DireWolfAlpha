@@ -62,7 +62,7 @@ def get_odd_warrior_deck():
 	n += 1*["Darius Crowley"]
 	n += 2*["Direhorn Hatchling"]
 	n += 2*["Rotten Applebaum"]
-	n += 1*["Faceless Manipulator"]
+	n += 1*["Hungry Crab"]
 	n += 1*["Harrison Jones"]
 	n += 1*["Baron Geddon"]
 	
@@ -168,17 +168,3 @@ if __name__ == '__main__':
 		card = Card(c[1])
 		
 	print("\n\n")	
-	
-	game = setup_game()
-	game.end_turn()
-	game.end_turn()
-	game.end_turn()
-	game.end_turn()
-	game.end_turn()
-	game.end_turn()
-	for card in game.player2.hand:
-		if card.is_playable():
-			print(card)
-			card.play()
-	print(game.player2.field)
-	
